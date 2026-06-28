@@ -1,0 +1,593 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+/* Header */
+header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header h1 { font-size: 28px; font-weight: 700; }
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.icon-btn:hover { background: #e5e5ea; }
+
+/* Auth banner */
+#authBanner { width: 100%; }
+
+.connected { color: #34c759; font-size: 14px; font-weight: 500; }
+
+.signin-btn {
+  width: 100%;
+  padding: 14px;
+  background: #e5e5ea;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.signin-btn:hover { background: #d1d1d6; }
+
+/* Transcript card */
+.transcript-card {
+  width: 100%;
+  min-height: 240px;
+  background: #e5e5ea;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.placeholder {
+  color: #8e8e93;
+  text-align: center;
+  width: 100%;
+  align-self: center;
+  line-height: 1.7;
+}
+
+#transcript {
+  color: #1c1c1e;
+  line-height: 1.6;
+  width: 100%;
+  word-break: break-word;
+}
+
+/* Status */
+.status {
+  font-size: 14px;
+  min-height: 24px;
+  text-align: center;
+  transition: color 0.2s;
+}
+.status.saving { color: #8e8e93; }
+.status.saved  { color: #34c759; font-weight: 500; }
+.status.error  { color: #ff3b30; }
+
+/* Record button */
+.record-btn {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: none;
+  background: #007aff;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 122, 255, 0.3);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.record-btn.recording {
+  background: #ff3b30;
+  box-shadow: 0 4px 20px rgba(255, 59, 48, 0.4);
+  transform: scale(1.08);
+}
+.record-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Settings modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 16px 48px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.modal-header h2 {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+.modal-header button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #007aff;
+  padding: 4px 8px;
+}
+.modal-header .bold { font-weight: 700; }
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field-label span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8e8e93;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.field-label small {
+  font-size: 12px;
+  color: #8e8e93;
+  line-height: 1.5;
+}
+
+.modal-body input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.modal-body input:focus { border-color: #007aff; }
+
+.danger {
+  background: none;
+  border: 1px solid #ff3b30;
+  color: #ff3b30;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.danger:hover { background: #fff5f5; }
+
+.hidden { display: none !important; }
+
+/* Therapist reflection card */
+.reflection-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 14px rgba(88, 86, 214, 0.08);
+  animation: reflect-in 0.25s ease;
+}
+
+@keyframes reflect-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reflection-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.reflection-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5856d6;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.reflection-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #1c1c1e;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.reflection-body.loading {
+  color: #8e8e93;
+  font-style: italic;
+}
+.reflection-body.reflection-error {
+  color: #ff3b30;
+}
+
+/* English coach card */
+.coach-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 14px rgba(255, 149, 0, 0.1);
+  animation: reflect-in 0.25s ease;
+}
+.coach-header { display: flex; align-items: center; margin-bottom: 10px; }
+.coach-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d4860b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.coach-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #1c1c1e;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.coach-body.loading { color: #8e8e93; font-style: italic; }
+.coach-body.coach-error { color: #ff3b30; }
+
+/* Manual text entry */
+.manual-entry {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.manual-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.manual-input:focus { border-color: #007aff; }
+.add-entry-btn {
+  align-self: flex-end;
+  padding: 10px 18px;
+  background: #007aff;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.add-entry-btn:hover { background: #0066d6; }
+.add-entry-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.voice-entry-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -10px;
+}
+
+/* Gratitude prompts */
+.gratitude-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 14px rgba(52, 199, 89, 0.08);
+  animation: reflect-in 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gratitude-header { display: flex; flex-direction: column; gap: 4px; }
+.gratitude-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2e9e54;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.gratitude-header small { font-size: 12px; color: #8e8e93; }
+.gratitude-list { display: flex; flex-direction: column; gap: 16px; }
+.gratitude-item { display: flex; flex-direction: column; gap: 8px; }
+.gratitude-preamble { font-size: 12px; color: #8e8e93; font-style: italic; margin: 0; }
+.gratitude-question { font-size: 14px; font-weight: 500; color: #1c1c1e; }
+.gratitude-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gratitude-chip {
+  padding: 7px 12px;
+  background: #f2f2f7;
+  border: 1px solid #e5e5ea;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.gratitude-chip:hover { background: #e5e5ea; }
+.gratitude-chip.selected {
+  background: #34c759;
+  border-color: #34c759;
+  color: #fff;
+}
+.gratitude-text {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.gratitude-text:focus { border-color: #34c759; }
+.reflect-btn {
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: #34c759;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.reflect-btn:hover { background: #2ba84a; }
+.reflect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Therapist reflection card (re-added header markup via JS) */
+.reflection-card .reflection-header { display: flex; align-items: center; margin-bottom: 10px; }
+
+/* Find patterns button */
+.find-patterns-btn {
+  width: 100%;
+  padding: 13px;
+  background: none;
+  border: 1.5px dashed #9b8fd4;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #5856d6;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.find-patterns-btn:hover { background: #f0efff; border-color: #5856d6; }
+
+/* Patterns card */
+.patterns-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 14px rgba(88, 86, 214, 0.12);
+  animation: reflect-in 0.25s ease;
+}
+.patterns-header { display: flex; align-items: center; margin-bottom: 10px; }
+.patterns-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5856d6;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.patterns-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #1c1c1e;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.patterns-body.loading { color: #8e8e93; font-style: italic; }
+.patterns-body.patterns-error { color: #ff3b30; }
+
+/* Editable voice transcript */
+#transcript[contenteditable="true"] {
+  cursor: text;
+  outline: none;
+  border-radius: 10px;
+  transition: background 0.15s, outline 0.15s;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  word-break: break-word;
+}
+#transcript[contenteditable="true"]:focus {
+  background: rgba(0, 122, 255, 0.05);
+  outline: 1.5px solid rgba(0, 122, 255, 0.25);
+}
+
+/* Personalised prompts loading state */
+.prompts-loading {
+  color: #8e8e93;
+  font-size: 14px;
+  font-style: italic;
+  text-align: center;
+  padding: 16px 0 8px;
+}
+
+/* Numbered coach tips */
+.coach-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.coach-tip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.coach-tip-num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fef3e2;
+  color: #d4860b;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+.coach-tip-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #1c1c1e;
+  margin: 0;
+}
+
+/* Poem card — appears after saving, mood-matched to the entry */
+.poem-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 2px 14px rgba(88, 86, 214, 0.08);
+  animation: reflect-in 0.25s ease;
+}
+.poem-header { margin-bottom: 10px; }
+.poem-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5856d6;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.poem-line {
+  font-size: 16px;
+  line-height: 1.75;
+  color: #1c1c1e;
+  font-style: italic;
+  white-space: pre-line;
+  margin-bottom: 10px;
+  padding-left: 14px;
+  border-left: 3px solid #a78bfa;
+}
+.poem-attribution {
+  font-size: 13px;
+  color: #8e8e93;
+  padding-left: 14px;
+}
+.poem-body.loading { color: #8e8e93; font-style: italic; font-size: 14px; }
+.poem-body.poem-error { color: #ff3b30; font-size: 14px; }
+
+/* Word of the Day — always visible at the bottom */
+.word-card {
+  width: 100%;
+  background: linear-gradient(135deg, #1c1c2e 0%, #2a2a45 100%);
+  border-radius: 16px;
+  padding: 22px 20px;
+  color: #fff;
+}
+.word-header { margin-bottom: 16px; }
+.word-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a78bfa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.word-body { display: flex; flex-direction: column; gap: 10px; }
+.word-found {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: normal;
+  margin: 0;
+}
+.word-found em { color: #c4b5fd; font-style: italic; }
+.word-word {
+  font-size: 30px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.word-meta { display: flex; align-items: center; gap: 8px; }
+.word-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.18);
+  border-radius: 4px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.word-definition {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  margin: 0;
+}
+.word-example-sentence {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #c4b5fd;
+  font-style: italic;
+  border-left: 2px solid rgba(167, 139, 250, 0.5);
+  padding-left: 12px;
+  margin: 0;
+}
+.word-tip {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+  margin: 0;
+}

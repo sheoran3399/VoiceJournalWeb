@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Journal</title>
+  <link rel="stylesheet" href="styles.css?v=8">
+  <!-- Google Identity Services — loads async, app.js initializes it on window load -->
+  <script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Voice Journal</h1>
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
+    </header>
+
+    <div id="authBanner"></div>
+
+    <div class="manual-entry">
+      <textarea id="manualInput" class="manual-input" rows="3"
+                placeholder="Write your journal entry here…" aria-label="Type a journal entry"></textarea>
+      <button id="addEntryBtn" class="add-entry-btn">Add entry</button>
+    </div>
+
+    <button id="recordBtn" class="record-btn" aria-label="Start recording">
+      <span id="micIcon">🎤</span>
+    </button>
+
+    <div class="transcript-card">
+      <p id="placeholder" class="placeholder">Type your entry above, or tap the mic to speak.<br>Your words will stay here until you finish the entry.</p>
+      <div id="transcript" class="hidden"></div>
+    </div>
+    <div class="voice-entry-actions">
+      <button id="addVoiceEntryBtn" class="add-entry-btn hidden">Add entry from voice</button>
+    </div>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <div id="gratitudeCard" class="gratitude-card hidden">
+      <div class="gratitude-header">
+        <span class="gratitude-title">🌱 Mental wellness prompts</span>
+        <small>Optional and dynamic — a random mix is shared with your reflection.</small>
+      </div>
+      <div id="gratitudeList" class="gratitude-list"></div>
+      <button id="reflectBtn" class="reflect-btn">Done — reflect on my entry</button>
+    </div>
+
+    <div id="reflectionCard" class="reflection-card hidden">
+      <div class="reflection-header">
+        <span class="reflection-title">🪷 IFS Reflection</span>
+      </div>
+      <div id="reflectionBody" class="reflection-body"></div>
+    </div>
+
+    <div id="coachCard" class="coach-card hidden">
+      <div class="coach-header">
+        <span class="coach-title">📘 English Coach</span>
+      </div>
+      <div id="coachBody" class="coach-body"></div>
+    </div>
+
+    <div id="poemCard" class="poem-card hidden">
+      <div class="poem-header">
+        <span class="poem-title">✨ A line for you</span>
+      </div>
+      <div id="poemBody" class="poem-body"></div>
+    </div>
+
+    <button id="findPatternsBtn" class="find-patterns-btn">🔮 Find patterns in my past journals</button>
+
+    <div id="patternsCard" class="patterns-card hidden">
+      <div class="patterns-header">
+        <span class="patterns-title">🔮 Patterns Across Your Journals</span>
+      </div>
+      <div id="patternsBody" class="patterns-body"></div>
+    </div>
+
+    <div id="wordCard" class="word-card">
+      <div class="word-header">
+        <span class="word-title">📖 Word of the Day</span>
+      </div>
+      <div id="wordBody" class="word-body"></div>
+    </div>
+  </div>
+
+  <!-- Settings sheet -->
+  <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button id="cancelSettings">Cancel</button>
+        <h2>Settings</h2>
+        <button id="saveSettings" class="bold">Save</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">
+          <span>Google Doc ID</span>
+          <input type="text" id="docIDInput" placeholder="Paste Doc ID"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <small>
+            Open your journal doc and copy the ID from the URL:<br>
+            docs.google.com/document/d/<strong>[THIS PART]</strong>/edit
+          </small>
+        </label>
+        <button id="signOutBtn" class="danger hidden">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js?v=8"></script>
+  <script src="js/speech.js?v=8"></script>
+  <script src="js/auth.js?v=8"></script>
+  <script src="js/docs.js?v=8"></script>
+  <script src="js/prompts.js?v=9"></script>
+  <script src="js/therapist.js?v=8"></script>
+  <script src="js/coach.js?v=9"></script>
+  <script src="js/patterns.js?v=8"></script>
+  <script src="js/word.js?v=2"></script>
+  <script src="js/poem.js?v=1"></script>
+  <script src="js/app.js?v=9"></script>
+</body>
+</html>
