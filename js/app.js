@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const addVoiceEntryBtn = document.getElementById('addVoiceEntryBtn');
   const statusEl     = document.getElementById('status');
   const settingsBtn  = document.getElementById('settingsBtn');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
   const modal        = document.getElementById('settingsModal');
   const docIDInput   = document.getElementById('docIDInput');
   const cancelBtn    = document.getElementById('cancelSettings');
@@ -625,6 +626,13 @@ document.addEventListener('DOMContentLoaded', () => {
       (transcriptEl.innerText || transcriptEl.textContent || '').trim() || getVisibleTranscript().trim()
     );
   }
+
+  // --- Theme toggle ---
+  themeToggleBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('theme', next);
+  });
 
   // --- Settings modal ---
   settingsBtn.addEventListener('click', () => {
