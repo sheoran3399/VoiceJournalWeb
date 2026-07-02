@@ -39,6 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const wordBody  = document.getElementById('wordBody');
   const PATTERNS_FULL_SCAN_PREFIX = 'patterns.fullScanDone.';
 
+  // CBT refs
+  const voicePanel = document.getElementById('voicePanel');
+  const cbtPanel = document.getElementById('cbtPanel');
+  const cbtForm = document.getElementById('cbtForm');
+  const saveCBTBtn = document.getElementById('saveCBTBtn');
+  const exportCBTBtn = document.getElementById('exportCBTBtn');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const cbtAnalysisCard = document.getElementById('cbtAnalysisCard');
+  const cbtAnalysisBody = document.getElementById('cbtAnalysisBody');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+
   // Holds the entry awaiting reflection/save. Null when nothing is pending.
   let pendingEntry = null;
   let draftTranscript = '';
@@ -442,6 +453,148 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('[Journal] patterns error:', err);
       setPatternsState('error', err.message);
+    }
+  });
+
+  function setPatternsState(state, text = '') {
+    patternsCard.classList.remove('hidden');
+    patternsBody.className = 'patterns-body';
+    if (state === 'loading') {
+      patternsBody.classList.add('loading');
+      patternsBody.textContent = text;
+    } else if (state === 'error') {
+      patternsBody.classList.add('patterns-error');
+      patternsBody.textContent = '⚠ ' + text;
+    } else {
+      patternsBody.textContent = text;
+    }
+  }
+
+  // --- Tab switching ---
+  function switchTab(tabName) {
+    tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabName));
+    voicePanel.classList.toggle('active', tabName === 'voice');
+    voicePanel.classList.toggle('hidden', tabName !== 'voice');
+    cbtPanel.classList.toggle('active', tabName === 'cbt');
+    cbtPanel.classList.toggle('hidden', tabName !== 'cbt');
+    
+    if (tabName === 'cbt') {
+      // Initialize CBT form on first switch
+      if (!cbtForm.querySelector('.cbt-section')) {
+        CBTService.renderForm(cbtForm);
+      }
+    }
+  }
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      switchTab(btn.dataset.tab);
+    });
+  });
+
+  // --- CBT save, export, and analyze ---
+  saveCBTBtn.addEventListener('click', async () => {
+    const entry = CBTService.readFormData();
+    if (!entry.scenario && !entry.somatic_before && !entry.emotion && !entry.thought && !entry.action && !entry.reframe && !entry.somatic_after) {
+      setSaveState('error', 'Add at least one field to save the entry.');
+      return;
+    }
+    
+    const saved = CBTService.saveEntry(entry);
+    if (saved) {
+      setSaveState('saved');
+      CBTService.clearForm();
+      setTimeout(() => setSaveState('idle'), 2000);
+    } else {
+      setSaveState('error', 'Failed to save entry. Check localStorage availability.');
+    }
+  });
+
+  exportCBTBtn.addEventListener('click', async () => {
+    if (!auth.isSignedIn) {
+      setSaveState('error', 'Sign in to Google first to export.');
+      return;
+    }
+    
+    setSaveState('saving');
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Could not refresh Google token.');
+      
+      const entries = CBTService.getAllEntries();
+      await CBTExportService.exportToGoogleDrive(entries, token);
+      
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
+    } catch (err) {
+      console.error('[CBT] export error:', err);
+      setSaveState('error', err.message);
+    }
+  });
+
+  analyzeBtn.addEventListener('click', () => {
+    const entries = CBTService.getAllEntries();
+    const analysis = CBTAnalyzer.analyze(entries);
+    
+    cbtAnalysisCard.classList.remove('hidden');
+    cbtAnalysisBody.replaceChildren();
+    
+    if (analysis.isEmpty) {
+      cbtAnalysisBody.innerHTML = '<div class="cbt-status">Start by saving your first CBT reflection entry to see patterns emerge.</div>';
+      return;
+    }
+    
+    // Tier 1 — Metrics
+    const metricsContainer = document.createElement('div');
+    metricsContainer.className = 'cbt-analysis-metrics';
+    
+    const totalCard = document.createElement('div');
+    totalCard.className = 'cbt-metric-card';
+    totalCard.innerHTML = `<div class="cbt-metric-label">Total Entries</div><div class="cbt-metric-value">${analysis.totalEntries}</div>`;
+    metricsContainer.appendChild(totalCard);
+    
+    const intensityDropCard = document.createElement('div');
+    intensityDropCard.className = 'cbt-metric-card';
+    const intensityValue = analysis.intensityDrop !== null ? analysis.intensityDrop : '—';
+    intensityDropCard.innerHTML = `<div class="cbt-metric-label">Avg Intensity Drop</div><div class="cbt-metric-value">${intensityValue}</div>`;
+    metricsContainer.appendChild(intensityDropCard);
+    
+    cbtAnalysisBody.appendChild(metricsContainer);
+    
+    // Top emotions
+    if (analysis.topEmotions.length > 0) {
+      const emotionsHeading = document.createElement('div');
+      emotionsHeading.className = 'cbt-insight';
+      const emotionsLabel = document.createElement('strong');
+      emotionsLabel.textContent = 'Top emotions: ';
+      emotionsHeading.appendChild(emotionsLabel);
+      emotionsHeading.appendChild(document.createTextNode(
+        analysis.topEmotions.map((e) => `${e.emotion} (${e.count})`).join(', ')
+      ));
+      cbtAnalysisBody.appendChild(emotionsHeading);
+    }
+
+    // Top distortions
+    if (analysis.topDistortions.length > 0) {
+      const distortionsHeading = document.createElement('div');
+      distortionsHeading.className = 'cbt-insight';
+      const distortionsLabel = document.createElement('strong');
+      distortionsLabel.textContent = 'Most common distortions: ';
+      distortionsHeading.appendChild(distortionsLabel);
+      distortionsHeading.appendChild(document.createTextNode(
+        analysis.topDistortions.map((d) => `${d.distortion} (${d.count})`).join(', ')
+      ));
+      cbtAnalysisBody.appendChild(distortionsHeading);
+    }
+    
+    // Insights
+    if (analysis.insights.length > 0) {
+      analysis.insights.forEach((insight) => {
+        const insightEl = document.createElement('div');
+        insightEl.className = 'cbt-insight';
+        insightEl.textContent = insight;
+        cbtAnalysisBody.appendChild(insightEl);
+      });
     }
   });
 

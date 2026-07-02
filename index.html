@@ -17,7 +17,25 @@
 
     <div id="authBanner"></div>
 
-    <div class="manual-entry">
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="voice" aria-label="Voice Journal tab">
+        <span class="tab-icon">🎤</span>
+        <span class="tab-label">Voice</span>
+      </button>
+      <button class="tab-btn" data-tab="cbt" aria-label="CBT Reflection tab">
+        <span class="tab-icon">🧠</span>
+        <span class="tab-label">CBT reflection</span>
+      </button>
+    </div>
+
+    <!-- Shared status line — sits outside both tab panels so save/export feedback
+         from either the Voice or CBT tab stays visible regardless of which is active. -->
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <!-- Voice journal panel (existing content) -->
+    <div id="voicePanel" class="tab-panel active">
+      <div class="manual-entry">
       <textarea id="manualInput" class="manual-input" rows="3"
                 placeholder="Write your journal entry here…" aria-label="Type a journal entry"></textarea>
       <button id="addEntryBtn" class="add-entry-btn">Add entry</button>
@@ -34,8 +52,6 @@
     <div class="voice-entry-actions">
       <button id="addVoiceEntryBtn" class="add-entry-btn hidden">Add entry from voice</button>
     </div>
-
-    <div id="status" class="status" role="status" aria-live="polite"></div>
 
     <div id="gratitudeCard" class="gratitude-card hidden">
       <div class="gratitude-header">
@@ -82,6 +98,25 @@
       </div>
       <div id="wordBody" class="word-body"></div>
     </div>
+    </div>
+
+    <!-- CBT reflection panel (new) -->
+    <div id="cbtPanel" class="tab-panel hidden">
+      <div id="cbtForm" class="cbt-form">
+        <!-- Dynamically populated by cbt.js -->
+      </div>
+      <div class="cbt-actions">
+        <button id="saveCBTBtn" class="add-entry-btn">Save entry</button>
+        <button id="exportCBTBtn" class="add-entry-btn secondary">Export to Google Drive</button>
+        <button id="analyzeBtn" class="add-entry-btn secondary">Run pattern analysis</button>
+      </div>
+      <div id="cbtAnalysisCard" class="cbt-analysis-card hidden">
+        <div class="cbt-analysis-header">
+          <span class="cbt-analysis-title">📊 Pattern Analysis</span>
+        </div>
+        <div id="cbtAnalysisBody" class="cbt-analysis-body"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Settings sheet -->
@@ -117,6 +152,8 @@
   <script src="js/patterns.js?v=8"></script>
   <script src="js/word.js?v=2"></script>
   <script src="js/poem.js?v=1"></script>
+  <script src="js/cbt.js?v=1"></script>
+  <script src="js/cbt-export.js?v=1"></script>
   <script src="js/app.js?v=9"></script>
 </body>
 </html>
