@@ -51,6 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const cbtAnalysisBody = document.getElementById('cbtAnalysisBody');
   const tabButtons = document.querySelectorAll('.tab-btn');
 
+  // Insights refs
+  const insightsPanel = document.getElementById('insightsPanel');
+  const insightsInput = document.getElementById('insightsInput');
+  const addInsightBtn = document.getElementById('addInsightBtn');
+  const insightsList = document.getElementById('insightsList');
+
   // Holds the entry awaiting reflection/save. Null when nothing is pending.
   let pendingEntry = null;
   let draftTranscript = '';
@@ -478,14 +484,84 @@ document.addEventListener('DOMContentLoaded', () => {
     voicePanel.classList.toggle('hidden', tabName !== 'voice');
     cbtPanel.classList.toggle('active', tabName === 'cbt');
     cbtPanel.classList.toggle('hidden', tabName !== 'cbt');
-    
+    insightsPanel.classList.toggle('active', tabName === 'insights');
+    insightsPanel.classList.toggle('hidden', tabName !== 'insights');
+
     if (tabName === 'cbt') {
       // Initialize CBT form on first switch
       if (!cbtForm.querySelector('.cbt-section')) {
         CBTService.renderForm(cbtForm);
       }
     }
+    if (tabName === 'insights') {
+      renderInsightsList();
+    }
   }
+
+  // Entry ids currently awaiting an AI rewrite response, so the list can show a loading state.
+  const pendingRewriteIds = new Set();
+
+  function renderInsightsList() {
+    InsightsService.renderList(insightsList, {
+      onDelete: (id) => {
+        InsightsService.deleteEntry(id);
+        renderInsightsList();
+      },
+      onRewrite: handleInsightRewrite,
+    }, pendingRewriteIds);
+  }
+
+  async function syncInsightsToDrive() {
+    if (!auth.isSignedIn) {
+      setSaveState('error', 'Sign in to Google to back up Insights entries to Drive.');
+      return;
+    }
+    const token = await auth.freshAccessToken();
+    if (!token) {
+      setSaveState('error', 'Could not refresh Google token. Please sign in again.');
+      return;
+    }
+    try {
+      await InsightsExportService.syncToGoogleDrive(InsightsService.getAllEntries(), token);
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
+    } catch (err) {
+      console.error('[Insights] Drive sync error:', err);
+      setSaveState('error', 'Saved locally, but Drive backup failed: ' + err.message);
+    }
+  }
+
+  async function handleInsightRewrite(id, styleKey) {
+    pendingRewriteIds.add(id);
+    renderInsightsList();
+    const entry = InsightsService.getAllEntries().find((e) => e.id === id);
+    try {
+      const rewriteText = await InsightsRewriteService.rewrite(entry.text, styleKey);
+      InsightsService.attachRewrite(id, styleKey, rewriteText);
+    } catch (err) {
+      console.error('[Insights] rewrite error:', err);
+      setSaveState('error', 'AI rewrite failed: ' + err.message);
+    } finally {
+      pendingRewriteIds.delete(id);
+      renderInsightsList();
+    }
+    await syncInsightsToDrive();
+  }
+
+  addInsightBtn.addEventListener('click', async () => {
+    const text = insightsInput.value.trim();
+    if (!text) {
+      setSaveState('error', 'Write something first.');
+      return;
+    }
+    if (!InsightsService.saveEntry(text)) {
+      setSaveState('error', 'Failed to save entry. Check localStorage availability.');
+      return;
+    }
+    insightsInput.value = '';
+    renderInsightsList();
+    await syncInsightsToDrive();
+  });
 
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {

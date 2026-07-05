@@ -8,7 +8,7 @@ const CBTService = {
       number: 1,
       label: 'Scenario',
       hint: 'What triggered this?',
-      picks: ['Work conflict', 'Difficult conversation', 'Deadline pressure', 'Social situation', 'Unexpected news', 'Feedback received'],
+      picks: ['Social setting with friends', 'Learning how to code', 'Running chores', 'Taking the shuttle', 'Idling at work', 'Extra from the cafeteria', 'With family'],
       hasSlider: false,
       hasDistortion: false,
     },
