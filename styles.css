@@ -640,7 +640,8 @@ header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700;
 }
 
 /* CBT Form */
-.cbt-form {
+.cbt-form,
+.manifestation-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -794,7 +795,8 @@ header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700;
   text-align: right;
 }
 
-.cbt-actions {
+.cbt-actions,
+.manifestation-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;

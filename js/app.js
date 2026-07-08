@@ -51,6 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const cbtAnalysisBody = document.getElementById('cbtAnalysisBody');
   const tabButtons = document.querySelectorAll('.tab-btn');
 
+  // Manifestation refs
+  const manifestationPanel = document.getElementById('manifestationPanel');
+  const manifestationForm = document.getElementById('manifestationForm');
+  const saveManifestationBtn = document.getElementById('saveManifestationBtn');
+  const exportManifestationBtn = document.getElementById('exportManifestationBtn');
+
   // Insights refs
   const insightsPanel = document.getElementById('insightsPanel');
   const insightsInput = document.getElementById('insightsInput');
@@ -484,6 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
     voicePanel.classList.toggle('hidden', tabName !== 'voice');
     cbtPanel.classList.toggle('active', tabName === 'cbt');
     cbtPanel.classList.toggle('hidden', tabName !== 'cbt');
+    manifestationPanel.classList.toggle('active', tabName === 'manifestation');
+    manifestationPanel.classList.toggle('hidden', tabName !== 'manifestation');
     insightsPanel.classList.toggle('active', tabName === 'insights');
     insightsPanel.classList.toggle('hidden', tabName !== 'insights');
 
@@ -491,6 +499,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // Initialize CBT form on first switch
       if (!cbtForm.querySelector('.cbt-section')) {
         CBTService.renderForm(cbtForm);
+      }
+    }
+    if (tabName === 'manifestation') {
+      // Initialize manifestation form on first switch
+      if (!manifestationForm.querySelector('.cbt-section')) {
+        ManifestationService.renderForm(manifestationForm);
       }
     }
     if (tabName === 'insights') {
@@ -605,6 +619,47 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (err) {
       console.error('[CBT] export error:', err);
+      setSaveState('error', err.message);
+    }
+  });
+
+  // --- Manifestation save and export ---
+  saveManifestationBtn.addEventListener('click', async () => {
+    const entry = ManifestationService.readFormData();
+    const hasContent = ManifestationService.sections.some((s) => entry[s.key]);
+    if (!hasContent) {
+      setSaveState('error', 'Add at least one field to save the entry.');
+      return;
+    }
+
+    const saved = ManifestationService.saveEntry(entry);
+    if (saved) {
+      setSaveState('saved');
+      ManifestationService.clearForm();
+      setTimeout(() => setSaveState('idle'), 2000);
+    } else {
+      setSaveState('error', 'Failed to save entry. Check localStorage availability.');
+    }
+  });
+
+  exportManifestationBtn.addEventListener('click', async () => {
+    if (!auth.isSignedIn) {
+      setSaveState('error', 'Sign in to Google first to export.');
+      return;
+    }
+
+    setSaveState('saving');
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Could not refresh Google token.');
+
+      const entries = ManifestationService.getAllEntries();
+      await ManifestationExportService.exportToGoogleDrive(entries, token);
+
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
+    } catch (err) {
+      console.error('[Manifestation] export error:', err);
       setSaveState('error', err.message);
     }
   });
