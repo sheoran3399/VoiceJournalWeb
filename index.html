@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
   <!-- Google Identity Services — loads async, app.js initializes it on window load -->
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script>
@@ -44,6 +44,10 @@
       <button class="tab-btn" data-tab="insights" aria-label="Insights tab">
         <span class="tab-icon">📝</span>
         <span class="tab-label">Insights</span>
+      </button>
+      <button class="tab-btn" data-tab="habits" aria-label="Habit tracking tab">
+        <span class="tab-icon">🗓️</span>
+        <span class="tab-label">Habits</span>
       </button>
     </div>
 
@@ -157,6 +161,23 @@
       </div>
       <div id="insightsList" class="insights-list"></div>
     </div>
+
+    <!-- Habit tracking panel (new) -->
+    <div id="habitsPanel" class="tab-panel hidden">
+      <div class="habit-month-nav">
+        <button id="habitPrevMonthBtn" class="icon-btn" aria-label="Previous month">&#8249;</button>
+        <div id="habitMonthLabel" class="habit-month-label"></div>
+        <button id="habitNextMonthBtn" class="icon-btn" aria-label="Next month">&#8250;</button>
+      </div>
+      <div id="habitRewardCard"></div>
+      <div class="habit-legend">
+        <span class="habit-legend-item">🎤 Journal</span>
+        <span class="habit-legend-item">✨ Manifestation</span>
+        <span class="habit-legend-item">🧠 CBT</span>
+      </div>
+      <div id="habitCalendar"></div>
+      <button id="refreshJournalDaysBtn" class="add-entry-btn secondary">Refresh journal check-ins</button>
+    </div>
   </div>
 
   <!-- Settings sheet -->
@@ -175,6 +196,16 @@
           <small>
             Open your journal doc and copy the ID from the URL:<br>
             docs.google.com/document/d/<strong>[THIS PART]</strong>/edit
+          </small>
+        </label>
+        <label class="field-label">
+          <span>Sister's PushPlus token (optional)</span>
+          <input type="text" id="wechatTokenInput" placeholder="Paste her PushPlus token"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <small>
+            She gets this by following the PushPlus official account at
+            pushplus.plus and copying her personal token. Every journal
+            entry gets pushed to her WeChat automatically once this is set.
           </small>
         </label>
         <button id="signOutBtn" class="danger hidden">Sign Out</button>
@@ -200,6 +231,9 @@
   <script src="js/insights.js?v=2"></script>
   <script src="js/insights-rewrite.js?v=1"></script>
   <script src="js/insights-export.js?v=1"></script>
-  <script src="js/app.js?v=12"></script>
+  <script src="js/habit.js?v=1"></script>
+  <script src="js/wechat-push.js?v=1"></script>
+  <script src="js/gmail-export.js?v=1"></script>
+  <script src="js/app.js?v=16"></script>
 </body>
 </html>

@@ -6,6 +6,9 @@ var CONFIG = {
   googleClientID: '876134232420-cns6bq26872hf4q49ds2ft4270hpfimj.apps.googleusercontent.com',
   // Single journal document — hard-coded since only one doc is used.
   docID: '1xrqq8NPJdeINP2N8bWoMdpo3mwmOR9TPLzRsDsdDaiY',
+  // Every journal entry gets emailed here too (163.com is reachable from
+  // mainland China, unlike Google Docs).
+  sisterEmail: '13839158759@163.com',
   // Base URL for the AI proxy (reflection + English coach).
   // Production: the deployed Cloudflare Worker (key stays server-side as a secret).
   // For purely-local dev with server.py you can set this to '' to use same-origin.

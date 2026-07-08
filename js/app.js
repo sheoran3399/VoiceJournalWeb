@@ -7,6 +7,7 @@ window.addEventListener('load', () => auth.init());
 document.addEventListener('DOMContentLoaded', () => {
   // Hard-coded single journal document; localStorage can still override via Settings.
   let docID = localStorage.getItem('docID') || CONFIG.docID || '';
+  let wechatToken = localStorage.getItem('wechatToken') || '';
 
   // DOM refs
   const authBanner   = document.getElementById('authBanner');
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   const modal        = document.getElementById('settingsModal');
   const docIDInput   = document.getElementById('docIDInput');
+  const wechatTokenInput = document.getElementById('wechatTokenInput');
   const cancelBtn    = document.getElementById('cancelSettings');
   const saveBtn      = document.getElementById('saveSettings');
   const signOutBtn   = document.getElementById('signOutBtn');
@@ -62,6 +64,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const insightsInput = document.getElementById('insightsInput');
   const addInsightBtn = document.getElementById('addInsightBtn');
   const insightsList = document.getElementById('insightsList');
+
+  // Habits refs
+  const habitsPanel = document.getElementById('habitsPanel');
+  const habitMonthLabel = document.getElementById('habitMonthLabel');
+  const habitPrevMonthBtn = document.getElementById('habitPrevMonthBtn');
+  const habitNextMonthBtn = document.getElementById('habitNextMonthBtn');
+  const habitRewardCard = document.getElementById('habitRewardCard');
+  const habitCalendar = document.getElementById('habitCalendar');
+  const refreshJournalDaysBtn = document.getElementById('refreshJournalDaysBtn');
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const today = new Date();
+  let habitViewYear = today.getFullYear();
+  let habitViewMonth = today.getMonth();
+  let habitEditingReward = false;
+  let habitJournalDates = new Set();
 
   // Holds the entry awaiting reflection/save. Null when nothing is pending.
   let pendingEntry = null;
@@ -343,6 +360,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       console.log('[Journal] saved successfully');
       setSaveState('saved');
+      // Best-effort mirror to WeChat via PushPlus (readable from mainland
+      // China with no doc/account to share). Never block or fail the
+      // primary Google Docs save on this, and it's a no-op until a
+      // recipient token is set in Settings.
+      WeChatPushService.pushEntry(wechatToken, text, date).catch((err) => {
+        console.error('[Journal] WeChat push failed:', err);
+      });
+      // Best-effort email mirror via Gmail API (readable from mainland
+      // China via 163.com, unlike Google Docs itself). Same token as the
+      // Docs save above — requires the gmail.send scope to be granted.
+      GmailExportService.sendEntry(CONFIG.sisterEmail, text, date, token).catch((err) => {
+        console.error('[Journal] Gmail send failed:', err);
+      });
       return true;
     } catch (err) {
       console.error('[Journal] save error:', err);
@@ -494,6 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
     manifestationPanel.classList.toggle('hidden', tabName !== 'manifestation');
     insightsPanel.classList.toggle('active', tabName === 'insights');
     insightsPanel.classList.toggle('hidden', tabName !== 'insights');
+    habitsPanel.classList.toggle('active', tabName === 'habits');
+    habitsPanel.classList.toggle('hidden', tabName !== 'habits');
 
     if (tabName === 'cbt') {
       // Initialize CBT form on first switch
@@ -510,7 +542,84 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabName === 'insights') {
       renderInsightsList();
     }
+    if (tabName === 'habits') {
+      habitEditingReward = false;
+      renderHabitsTab();
+    }
   }
+
+  // --- Habit tracking ---
+  function currentDateSets() {
+    return {
+      journal: habitJournalDates,
+      manifestation: HabitService.entryDateSet(ManifestationService.getAllEntries()),
+      cbt: HabitService.entryDateSet(CBTService.getAllEntries()),
+    };
+  }
+
+  function renderHabitsTab() {
+    habitMonthLabel.textContent = `${MONTH_NAMES[habitViewMonth]} ${habitViewYear}`;
+    const dateSets = currentDateSets();
+    HabitService.renderCalendar(habitCalendar, habitViewYear, habitViewMonth, dateSets);
+    HabitService.renderReward(habitRewardCard, habitViewYear, habitViewMonth, dateSets, {
+      onSave: () => {
+        habitEditingReward = false;
+        renderHabitsTab();
+      },
+      onEdit: () => {
+        habitEditingReward = true;
+        renderHabitsTab();
+      },
+      onCancelEdit: () => {
+        habitEditingReward = false;
+        renderHabitsTab();
+      },
+    }, habitEditingReward);
+  }
+
+  async function refreshJournalDays() {
+    if (!auth.isSignedIn) {
+      setSaveState('error', 'Sign in to Google to include Journal check-ins.');
+      return;
+    }
+    if (!docID) {
+      setSaveState('error', 'Set a Google Doc ID in Settings first.');
+      return;
+    }
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Could not refresh Google token.');
+      habitJournalDates = await HabitService.fetchJournalDateSet(docID, token, { force: true });
+      renderHabitsTab();
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2000);
+    } catch (err) {
+      console.error('[Habit] journal fetch error:', err);
+      setSaveState('error', err.message);
+    }
+  }
+
+  habitPrevMonthBtn.addEventListener('click', () => {
+    habitViewMonth -= 1;
+    if (habitViewMonth < 0) {
+      habitViewMonth = 11;
+      habitViewYear -= 1;
+    }
+    habitEditingReward = false;
+    renderHabitsTab();
+  });
+
+  habitNextMonthBtn.addEventListener('click', () => {
+    habitViewMonth += 1;
+    if (habitViewMonth > 11) {
+      habitViewMonth = 0;
+      habitViewYear += 1;
+    }
+    habitEditingReward = false;
+    renderHabitsTab();
+  });
+
+  refreshJournalDaysBtn.addEventListener('click', refreshJournalDays);
 
   // Entry ids currently awaiting an AI rewrite response, so the list can show a loading state.
   const pendingRewriteIds = new Set();
@@ -768,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Settings modal ---
   settingsBtn.addEventListener('click', () => {
     docIDInput.value = docID;
+    wechatTokenInput.value = wechatToken;
     signOutBtn.classList.toggle('hidden', !auth.isSignedIn);
     modal.classList.remove('hidden');
   });
@@ -777,6 +887,8 @@ document.addEventListener('DOMContentLoaded', () => {
   saveBtn.addEventListener('click', () => {
     docID = docIDInput.value.trim();
     localStorage.setItem('docID', docID);
+    wechatToken = wechatTokenInput.value.trim();
+    localStorage.setItem('wechatToken', wechatToken);
     modal.classList.add('hidden');
   });
 

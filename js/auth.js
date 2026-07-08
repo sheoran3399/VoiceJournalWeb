@@ -13,7 +13,7 @@ class GoogleAuthManager {
     if (this._tokenClient) return;
     this._tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: this.clientID,
-      scope: 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive',
+      scope: 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send',
       callback: (response) => {
         if (response.error) {
           this._pendingResolve?.(null);
