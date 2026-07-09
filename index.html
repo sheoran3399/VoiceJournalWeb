@@ -120,6 +120,21 @@
       </div>
       <div id="wordBody" class="word-body"></div>
     </div>
+
+    <!-- Cognee-backed recall: asks a question across the shared knowledge
+         graph (all tabs), not just a keyword match over this tab's text. -->
+    <div class="manual-entry">
+      <textarea id="graphRecallInput" class="manual-input" rows="2"
+                placeholder="Ask your journal something, e.g. &quot;what was I stressed about last month?&quot;"
+                aria-label="Ask your journal"></textarea>
+      <button id="graphRecallBtn" class="add-entry-btn secondary">🔍 Ask your journal</button>
+    </div>
+    <div id="graphRecallCard" class="patterns-card hidden">
+      <div class="patterns-header">
+        <span class="patterns-title">🔍 Ask Your Journal</span>
+      </div>
+      <div id="graphRecallBody" class="patterns-body"></div>
+    </div>
     </div>
 
     <!-- CBT reflection panel (new) -->
@@ -130,12 +145,23 @@
       <div class="cbt-actions">
         <button id="saveCBTBtn" class="add-entry-btn">Save entry</button>
         <button id="analyzeBtn" class="add-entry-btn secondary">Run pattern analysis</button>
+        <button id="graphPatternsBtn" class="add-entry-btn secondary">🕸 Recurring patterns</button>
       </div>
       <div id="cbtAnalysisCard" class="cbt-analysis-card hidden">
         <div class="cbt-analysis-header">
           <span class="cbt-analysis-title">📊 Pattern Analysis</span>
         </div>
         <div id="cbtAnalysisBody" class="cbt-analysis-body"></div>
+      </div>
+      <!-- Cognee-backed: multi-hop patterns across the shared graph (Voice +
+           CBT + Manifestation), not just this tab's own text — see
+           GraphService.cbtPatterns() and build_pattern_query() in
+           VoiceJournalGraph/main.py. -->
+      <div id="graphPatternsCard" class="patterns-card hidden">
+        <div class="patterns-header">
+          <span class="patterns-title">🕸 Recurring Patterns</span>
+        </div>
+        <div id="graphPatternsBody" class="patterns-body"></div>
       </div>
     </div>
 
@@ -206,6 +232,10 @@
             entry gets pushed to her WeChat automatically once this is set.
           </small>
         </label>
+        <div class="field-label">
+          <button id="graphBackfillBtn" class="add-entry-btn secondary">🕸 Wipe &amp; backfill graph from full history</button>
+          <small id="graphBackfillStatus">Rebuilds the Cognee knowledge graph from every saved Voice, CBT, and Manifestation entry — wipes existing graph data first, then re-ingests your full history so cross-tab recall/patterns cover everything, not just entries saved from now on.</small>
+        </div>
         <button id="signOutBtn" class="danger hidden">Sign Out</button>
       </div>
     </div>
@@ -215,6 +245,7 @@
   <script src="js/speech.js?v=8"></script>
   <script src="js/auth.js?v=8"></script>
   <script src="js/docs.js?v=8"></script>
+  <script src="js/graph.js?v=2"></script>
   <script src="js/prompts.js?v=9"></script>
   <script src="js/therapist.js?v=8"></script>
   <script src="js/coach.js?v=9"></script>
@@ -230,6 +261,6 @@
   <script src="js/habit.js?v=2"></script>
   <script src="js/wechat-push.js?v=1"></script>
   <script src="js/gmail-export.js?v=1"></script>
-  <script src="js/app.js?v=17"></script>
+  <script src="js/app.js?v=18"></script>
 </body>
 </html>

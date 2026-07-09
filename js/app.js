@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelBtn    = document.getElementById('cancelSettings');
   const saveBtn      = document.getElementById('saveSettings');
   const signOutBtn   = document.getElementById('signOutBtn');
+  const graphBackfillBtn    = document.getElementById('graphBackfillBtn');
+  const graphBackfillStatus = document.getElementById('graphBackfillStatus');
+  const graphBackfillDefaultStatus = graphBackfillStatus.textContent;
   const reflectionCard = document.getElementById('reflectionCard');
   const reflectionBody = document.getElementById('reflectionBody');
   const coachCard      = document.getElementById('coachCard');
@@ -42,6 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const wordBody  = document.getElementById('wordBody');
   const PATTERNS_FULL_SCAN_PREFIX = 'patterns.fullScanDone.';
 
+  // Cognee graph refs (Voice tab: "Ask your journal")
+  const graphRecallInput = document.getElementById('graphRecallInput');
+  const graphRecallBtn   = document.getElementById('graphRecallBtn');
+  const graphRecallCard  = document.getElementById('graphRecallCard');
+  const graphRecallBody  = document.getElementById('graphRecallBody');
+
   // CBT refs
   const voicePanel = document.getElementById('voicePanel');
   const cbtPanel = document.getElementById('cbtPanel');
@@ -50,6 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const analyzeBtn = document.getElementById('analyzeBtn');
   const cbtAnalysisCard = document.getElementById('cbtAnalysisCard');
   const cbtAnalysisBody = document.getElementById('cbtAnalysisBody');
+  // Cognee graph refs (CBT tab: "Recurring patterns")
+  const graphPatternsBtn  = document.getElementById('graphPatternsBtn');
+  const graphPatternsCard = document.getElementById('graphPatternsCard');
+  const graphPatternsBody = document.getElementById('graphPatternsBody');
   const tabButtons = document.querySelectorAll('.tab-btn');
 
   // Manifestation refs
@@ -371,6 +384,11 @@ document.addEventListener('DOMContentLoaded', () => {
       GmailExportService.sendEntry(CONFIG.sisterEmail, text, date, token).catch((err) => {
         console.error('[Journal] Gmail send failed:', err);
       });
+      // Best-effort: feed this entry into the Cognee knowledge graph. Never
+      // blocks or fails the primary save — same pattern as WeChat/Gmail above.
+      GraphService.ingest('Voice Journal', text, date, token).catch((err) => {
+        console.error('[Journal] Graph ingest failed:', err);
+      });
       return true;
     } catch (err) {
       console.error('[Journal] save error:', err);
@@ -494,6 +512,41 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('[Journal] patterns error:', err);
       setPatternsState('error', err.message);
+    }
+  });
+
+  // Shared loading/result/error rendering for the two Cognee-backed cards
+  // (graphRecallCard, graphPatternsCard) — both reuse the .patterns-card /
+  // .patterns-body CSS treatment, so they share this state machine too.
+  function setGraphCardState(card, body, state, text = '') {
+    card.classList.remove('hidden');
+    body.className = 'patterns-body';
+    if (state === 'loading') {
+      body.classList.add('loading');
+      body.textContent = text;
+    } else if (state === 'error') {
+      body.classList.add('patterns-error');
+      body.textContent = '⚠ ' + text;
+    } else {
+      body.textContent = text;
+    }
+  }
+
+  graphRecallBtn.addEventListener('click', async () => {
+    const question = graphRecallInput.value.trim();
+    if (!question) {
+      setGraphCardState(graphRecallCard, graphRecallBody, 'error', 'Ask a question first.');
+      return;
+    }
+    setGraphCardState(graphRecallCard, graphRecallBody, 'loading', 'Searching your journal…');
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Sign in to Google first.');
+      const { answer } = await GraphService.recall(question, token);
+      setGraphCardState(graphRecallCard, graphRecallBody, 'result', answer);
+    } catch (err) {
+      console.error('[Graph] recall error:', err);
+      setGraphCardState(graphRecallCard, graphRecallBody, 'error', err.message);
     }
   });
 
@@ -710,6 +763,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const block = service.formatEntryBlock(entry);
       await GoogleDocsService.appendToTab(docID, token, service.TAB_TITLE, block);
       setSaveState('saved');
+      // Best-effort: feed this entry into the Cognee knowledge graph, tagged
+      // with its source tab so cross-tab links (Voice <-> CBT <-> Manifestation)
+      // can form. Never blocks or fails the primary save.
+      GraphService.ingest(service.TAB_TITLE, block, new Date(), token).catch((err) => {
+        console.error(`[${service.TAB_TITLE}] Graph ingest failed:`, err);
+      });
       service.clearForm();
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (err) {
@@ -814,6 +873,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  graphPatternsBtn.addEventListener('click', async () => {
+    setGraphCardState(graphPatternsCard, graphPatternsBody, 'loading', 'Looking for recurring patterns across your journal…');
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Sign in to Google first.');
+      const { answer } = await GraphService.cbtPatterns(token);
+      setGraphCardState(graphPatternsCard, graphPatternsBody, 'result', answer);
+    } catch (err) {
+      console.error('[Graph] patterns error:', err);
+      setGraphCardState(graphPatternsCard, graphPatternsBody, 'error', err.message);
+    }
+  });
+
   function setPatternsState(state, text = '') {
     patternsCard.classList.remove('hidden');
     patternsBody.className = 'patterns-body';
@@ -854,6 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
     docIDInput.value = docID;
     wechatTokenInput.value = wechatToken;
     signOutBtn.classList.toggle('hidden', !auth.isSignedIn);
+    graphBackfillStatus.textContent = graphBackfillDefaultStatus;
     modal.classList.remove('hidden');
   });
 
@@ -866,6 +939,76 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('wechatToken', wechatToken);
     modal.classList.add('hidden');
   });
+
+  // --- Graph backfill: reuses the same GoogleDocsService reads + PatternService
+  // parsing as "Find patterns"/"Run pattern analysis" (just across all three
+  // tabs instead of one), then sync-ingests each dated entry into the graph
+  // one at a time so a bad entry doesn't abort the whole run.
+  async function runGraphBackfill() {
+    if (!auth.isSignedIn) {
+      graphBackfillStatus.textContent = '⚠ Sign in to Google first.';
+      return;
+    }
+    if (!docID) {
+      graphBackfillStatus.textContent = '⚠ No Google Doc ID set — add one above first.';
+      return;
+    }
+    graphBackfillBtn.disabled = true;
+    graphBackfillStatus.textContent = 'Reading your full journal history…';
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Could not refresh Google token. Please sign in again.');
+
+      await GraphService.reset(token);
+
+      const sources = [
+        { tab: 'Voice Journal', read: () => GoogleDocsService.readEntriesText(docID, token) },
+        { tab: CBTService.TAB_TITLE, read: () => GoogleDocsService.readTabText(docID, token, CBTService.TAB_TITLE) },
+        { tab: ManifestationService.TAB_TITLE, read: () => GoogleDocsService.readTabText(docID, token, ManifestationService.TAB_TITLE) },
+      ];
+
+      const entries = [];
+      let skippedUndated = 0;
+      for (const { tab, read } of sources) {
+        let text;
+        try {
+          text = await read();
+        } catch (err) {
+          console.error(`[Graph] backfill: could not read ${tab}:`, err);
+          continue;
+        }
+        for (const e of PatternService.parseEntries(text)) {
+          if (e.parsedDate) entries.push({ tab, text: e.text, date: e.parsedDate });
+          else skippedUndated += 1;
+        }
+      }
+
+      let done = 0;
+      let failed = 0;
+      for (const entry of entries) {
+        graphBackfillStatus.textContent = `Backfilling… ${done + failed}/${entries.length} entries`;
+        try {
+          await GraphService.ingest(entry.tab, entry.text, entry.date, token, { sync: true });
+          done += 1;
+        } catch (err) {
+          console.error('[Graph] backfill entry failed:', err);
+          failed += 1;
+        }
+      }
+
+      const parts = [`Backfilled ${done}/${entries.length} entries into the graph.`];
+      if (failed) parts.push(`${failed} failed.`);
+      if (skippedUndated) parts.push(`${skippedUndated} skipped (no parseable date).`);
+      graphBackfillStatus.textContent = parts.join(' ');
+    } catch (err) {
+      console.error('[Graph] backfill error:', err);
+      graphBackfillStatus.textContent = `⚠ ${err.message}`;
+    } finally {
+      graphBackfillBtn.disabled = false;
+    }
+  }
+
+  graphBackfillBtn.addEventListener('click', runGraphBackfill);
 
   signOutBtn.addEventListener('click', () => {
     auth.signOut();

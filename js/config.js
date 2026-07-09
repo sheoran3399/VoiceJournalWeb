@@ -13,4 +13,9 @@ var CONFIG = {
   // Production: the deployed Cloudflare Worker (key stays server-side as a secret).
   // For purely-local dev with server.py you can set this to '' to use same-origin.
   apiBase: 'https://voicejournal-api.sheoran3399.workers.dev',
+  // Base URL for the Cognee knowledge-graph backend (separate Python service,
+  // see /Users/shanren/VoiceJournal/VoiceJournalGraph).
+  // TEMP for local smoke-testing — switch to 'https://voicejournal-graph.fly.dev'
+  // once deployed.
+  graphApiBase: 'http://localhost:8001',
 };
