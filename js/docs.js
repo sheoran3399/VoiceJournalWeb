@@ -92,4 +92,51 @@ const GoogleDocsService = {
       throw new Error(`Failed to save to Google Docs (${res.status}). ${body?.error?.message ?? 'Check your connection.'}`);
     }
   },
+
+  // Named tabs (e.g. "CBT Reflection", "Manifestation") must already exist —
+  // the Docs API can read/write tab content but cannot create tabs. Add them
+  // by hand once (tab sidebar → right-click → Add tab) before using these.
+  async _fetchTabByTitle(documentID, accessToken, tabTitle) {
+    const res = await fetch(`${this.BASE_URL}/${documentID}?includeTabsContent=true`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(`Failed to fetch document (${res.status}). ${body?.error?.message ?? 'Check the Doc ID and permissions.'}`);
+    }
+    const json = await res.json();
+    const tab = this._searchTabs(json.tabs, tabTitle);
+    if (!tab) {
+      throw new Error(`Tab "${tabTitle}" not found. Add it in the Google Doc first (tab sidebar → right-click → Add tab) and name it exactly "${tabTitle}".`);
+    }
+    return tab;
+  },
+
+  _searchTabs(tabs, title) {
+    for (const tab of tabs || []) {
+      if (tab.tabProperties?.title === title) return tab;
+      const nested = this._searchTabs(tab.childTabs, title);
+      if (nested) return nested;
+    }
+    return null;
+  },
+
+  // Prepends a formatted block to a named tab, newest-first (same convention
+  // as the main journal tab).
+  async appendToTab(documentID, accessToken, tabTitle, block) {
+    const tab = await this._fetchTabByTitle(documentID, accessToken, tabTitle);
+    const tabId = tab.tabProperties.tabId;
+    await this._insertText(block, 1, tabId, documentID, accessToken);
+  },
+
+  // Returns a named tab's content as plain text, for local parsing (pattern
+  // analysis, habit-tracking check-in dates).
+  async readTabText(documentID, accessToken, tabTitle) {
+    const tab = await this._fetchTabByTitle(documentID, accessToken, tabTitle);
+    const content = tab.documentTab?.body?.content ?? [];
+    return content
+      .flatMap(el => el.paragraph?.elements ?? [])
+      .map(el => el.textRun?.content ?? '')
+      .join('');
+  },
 };

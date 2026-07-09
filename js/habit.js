@@ -4,7 +4,7 @@ const HabitService = {
   REWARD_STORAGE_KEY: 'habit_rewards',
   DEFAULT_TARGET: 21,
 
-  _journalCache: { docID: null, fetchedAt: 0, dates: new Set() },
+  _tabCache: {},
 
   monthKey(year, month) {
     return `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -44,33 +44,31 @@ const HabitService = {
     return `${y}-${m}-${day}`;
   },
 
-  // Converts an entries array (CBT/Manifestation — each has created_at) into
-  // a Set of 'YYYY-MM-DD' local-date keys.
-  entryDateSet(entries) {
-    const set = new Set();
-    entries.forEach((e) => {
-      const key = this._toDateKey(e.created_at);
-      if (key) set.add(key);
-    });
-    return set;
-  },
-
-  // Journal entries only live in the Google Doc, so this fetches + parses it.
-  // Cached in memory for 5 minutes per docID; pass force:true to bypass.
-  async fetchJournalDateSet(docID, accessToken, { force = false } = {}) {
+  // Journal, CBT, and Manifestation entries all live in Doc tabs now, so
+  // every check-in date set requires a fetch. Cached in memory for 5 minutes
+  // per docID+tab; pass force:true to bypass.
+  async _fetchDateSet(cacheKey, fetchText, { force = false } = {}) {
     const now = Date.now();
-    const cache = this._journalCache;
-    if (!force && cache.docID === docID && now - cache.fetchedAt < 5 * 60 * 1000) {
+    const cache = this._tabCache[cacheKey];
+    if (!force && cache && now - cache.fetchedAt < 5 * 60 * 1000) {
       return cache.dates;
     }
-    const docText = await GoogleDocsService.readEntriesText(docID, accessToken);
-    const parsed = PatternService.parseEntries(docText);
+    const text = await fetchText();
+    const parsed = PatternService.parseEntries(text);
     const dates = new Set();
     parsed.forEach((e) => {
       if (e.parsedDate) dates.add(this._toDateKey(e.parsedDate));
     });
-    this._journalCache = { docID, fetchedAt: now, dates };
+    this._tabCache[cacheKey] = { fetchedAt: now, dates };
     return dates;
+  },
+
+  fetchJournalDateSet(docID, accessToken, opts = {}) {
+    return this._fetchDateSet(`${docID}::journal`, () => GoogleDocsService.readEntriesText(docID, accessToken), opts);
+  },
+
+  fetchTabDateSet(docID, accessToken, tabTitle, opts = {}) {
+    return this._fetchDateSet(`${docID}::${tabTitle}`, () => GoogleDocsService.readTabText(docID, accessToken, tabTitle), opts);
   },
 
   daysInMonth(year, month) {

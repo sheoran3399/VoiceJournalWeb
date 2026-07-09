@@ -1,5 +1,5 @@
 const ManifestationService = {
-  STORAGE_KEY: 'manifestation_entries',
+  TAB_TITLE: 'Manifestation',
 
   // Section definitions in causal manifestation-practice order
   sections: [
@@ -254,30 +254,70 @@ const ManifestationService = {
     });
   },
 
-  // localStorage management
-  loadEntries() {
-    try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      console.error('[Manifestation] Error loading entries:', e);
-      return [];
-    }
+  // Renders an entry as a "[timestamp]\nLabel: value\n..." block, matching
+  // the journal tab's own format so PatternService.parseEntries can read
+  // either one back.
+  formatEntryBlock(entry) {
+    const formatted = new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'full',
+      timeStyle: 'medium',
+    }).format(new Date(entry.created_at));
+    const lines = [`[${formatted}]`];
+
+    this.sections.forEach((section) => {
+      const value = entry[section.key] || '';
+      let annotation = '';
+      if (section.hasSlider && entry[`${section.key}_belief`] !== undefined) {
+        annotation += ` (Belief: ${entry[`${section.key}_belief`]})`;
+      }
+      if (section.hasDistortion && entry.belief_pattern) {
+        annotation += ` (Pattern: ${entry.belief_pattern})`;
+      }
+      // A belief-pattern tag can exist even when the textarea is empty —
+      // still write the line so the tag survives the round trip.
+      if (!value && !annotation) return;
+      lines.push(`${section.label}: ${value}${annotation}`);
+    });
+
+    lines.push('');
+    return lines.join('\n') + '\n';
   },
 
-  saveEntry(entry) {
-    try {
-      const entries = this.loadEntries();
-      entries.push(entry);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(entries));
-      return true;
-    } catch (e) {
-      console.error('[Manifestation] Error saving entry:', e);
-      return false;
-    }
-  },
+  // Reverses formatEntryBlock: given one parsed block's body text (as
+  // returned by PatternService.parseEntries) and its date, reconstructs the
+  // same shaped object readFormData() produces.
+  parseEntryBlock(text, dateISO) {
+    const data = {
+      id: `manifestation_${new Date(dateISO).getTime()}`,
+      type: 'manifestation',
+      created_at: dateISO,
+    };
+    const lines = text.split('\n');
 
-  getAllEntries() {
-    return this.loadEntries();
+    this.sections.forEach((section) => {
+      const line = lines.find((l) => l.startsWith(`${section.label}: `));
+      if (!line) return;
+      let rest = line.slice(section.label.length + 2);
+
+      if (section.hasSlider) {
+        const match = rest.match(/^(.*) \(Belief: (\d+)\)$/);
+        if (match) {
+          rest = match[1];
+          data[`${section.key}_belief`] = parseInt(match[2], 10);
+        }
+      }
+
+      if (section.hasDistortion) {
+        const match = rest.match(/^(.*) \(Pattern: (.*)\)$/);
+        if (match) {
+          rest = match[1];
+          data.belief_pattern = match[2];
+        }
+      }
+
+      data[section.key] = rest;
+    });
+
+    return data;
   },
 };

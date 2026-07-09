@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const cbtPanel = document.getElementById('cbtPanel');
   const cbtForm = document.getElementById('cbtForm');
   const saveCBTBtn = document.getElementById('saveCBTBtn');
-  const exportCBTBtn = document.getElementById('exportCBTBtn');
   const analyzeBtn = document.getElementById('analyzeBtn');
   const cbtAnalysisCard = document.getElementById('cbtAnalysisCard');
   const cbtAnalysisBody = document.getElementById('cbtAnalysisBody');
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const manifestationPanel = document.getElementById('manifestationPanel');
   const manifestationForm = document.getElementById('manifestationForm');
   const saveManifestationBtn = document.getElementById('saveManifestationBtn');
-  const exportManifestationBtn = document.getElementById('exportManifestationBtn');
 
   // Insights refs
   const insightsPanel = document.getElementById('insightsPanel');
@@ -78,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let habitViewYear = today.getFullYear();
   let habitViewMonth = today.getMonth();
   let habitEditingReward = false;
-  let habitJournalDates = new Set();
+  let habitDateSets = { journal: new Set(), manifestation: new Set(), cbt: new Set() };
 
   // Holds the entry awaiting reflection/save. Null when nothing is pending.
   let pendingEntry = null;
@@ -549,19 +547,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Habit tracking ---
-  function currentDateSets() {
-    return {
-      journal: habitJournalDates,
-      manifestation: HabitService.entryDateSet(ManifestationService.getAllEntries()),
-      cbt: HabitService.entryDateSet(CBTService.getAllEntries()),
-    };
-  }
-
   function renderHabitsTab() {
     habitMonthLabel.textContent = `${MONTH_NAMES[habitViewMonth]} ${habitViewYear}`;
-    const dateSets = currentDateSets();
-    HabitService.renderCalendar(habitCalendar, habitViewYear, habitViewMonth, dateSets);
-    HabitService.renderReward(habitRewardCard, habitViewYear, habitViewMonth, dateSets, {
+    HabitService.renderCalendar(habitCalendar, habitViewYear, habitViewMonth, habitDateSets);
+    HabitService.renderReward(habitRewardCard, habitViewYear, habitViewMonth, habitDateSets, {
       onSave: () => {
         habitEditingReward = false;
         renderHabitsTab();
@@ -577,9 +566,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }, habitEditingReward);
   }
 
-  async function refreshJournalDays() {
+  // Journal, CBT, and Manifestation entries all live in Doc tabs now, so a
+  // single sign-in-gated fetch pulls check-in dates for all three at once.
+  async function refreshCheckIns() {
     if (!auth.isSignedIn) {
-      setSaveState('error', 'Sign in to Google to include Journal check-ins.');
+      setSaveState('error', 'Sign in to Google to load check-ins.');
       return;
     }
     if (!docID) {
@@ -589,12 +580,17 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const token = await auth.freshAccessToken();
       if (!token) throw new Error('Could not refresh Google token.');
-      habitJournalDates = await HabitService.fetchJournalDateSet(docID, token, { force: true });
+      const [journal, cbt, manifestation] = await Promise.all([
+        HabitService.fetchJournalDateSet(docID, token, { force: true }),
+        HabitService.fetchTabDateSet(docID, token, CBTService.TAB_TITLE, { force: true }),
+        HabitService.fetchTabDateSet(docID, token, ManifestationService.TAB_TITLE, { force: true }),
+      ]);
+      habitDateSets = { journal, cbt, manifestation };
       renderHabitsTab();
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (err) {
-      console.error('[Habit] journal fetch error:', err);
+      console.error('[Habit] check-in fetch error:', err);
       setSaveState('error', err.message);
     }
   }
@@ -619,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderHabitsTab();
   });
 
-  refreshJournalDaysBtn.addEventListener('click', refreshJournalDays);
+  refreshJournalDaysBtn.addEventListener('click', refreshCheckIns);
 
   // Entry ids currently awaiting an AI rewrite response, so the list can show a loading state.
   const pendingRewriteIds = new Set();
@@ -692,91 +688,70 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- CBT save, export, and analyze ---
-  saveCBTBtn.addEventListener('click', async () => {
-    const entry = CBTService.readFormData();
-    if (!entry.scenario && !entry.somatic_before && !entry.emotion && !entry.thought && !entry.action && !entry.reframe && !entry.somatic_after) {
+  // --- Save a structured entry (CBT or Manifestation) to its own Doc tab ---
+  async function saveToTab(service, hasContentCheck) {
+    const entry = service.readFormData();
+    if (!hasContentCheck(entry)) {
       setSaveState('error', 'Add at least one field to save the entry.');
       return;
     }
-    
-    const saved = CBTService.saveEntry(entry);
-    if (saved) {
-      setSaveState('saved');
-      CBTService.clearForm();
-      setTimeout(() => setSaveState('idle'), 2000);
-    } else {
-      setSaveState('error', 'Failed to save entry. Check localStorage availability.');
-    }
-  });
-
-  exportCBTBtn.addEventListener('click', async () => {
     if (!auth.isSignedIn) {
-      setSaveState('error', 'Sign in to Google first to export.');
+      setSaveState('error', 'Sign in to Google first.');
       return;
     }
-    
+    if (!docID) {
+      setSaveState('error', 'No Google Doc ID set. Click ⚙ to add one.');
+      return;
+    }
     setSaveState('saving');
     try {
       const token = await auth.freshAccessToken();
       if (!token) throw new Error('Could not refresh Google token.');
-      
-      const entries = CBTService.getAllEntries();
-      await CBTExportService.exportToGoogleDrive(entries, token);
-      
+      const block = service.formatEntryBlock(entry);
+      await GoogleDocsService.appendToTab(docID, token, service.TAB_TITLE, block);
       setSaveState('saved');
+      service.clearForm();
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (err) {
-      console.error('[CBT] export error:', err);
+      console.error(`[${service.TAB_TITLE}] save error:`, err);
       setSaveState('error', err.message);
     }
-  });
+  }
 
-  // --- Manifestation save and export ---
-  saveManifestationBtn.addEventListener('click', async () => {
-    const entry = ManifestationService.readFormData();
-    const hasContent = ManifestationService.sections.some((s) => entry[s.key]);
-    if (!hasContent) {
-      setSaveState('error', 'Add at least one field to save the entry.');
-      return;
-    }
+  saveCBTBtn.addEventListener('click', () => saveToTab(
+    CBTService,
+    (entry) => entry.scenario || entry.somatic_before || entry.emotion || entry.thought || entry.action || entry.reframe || entry.somatic_after
+  ));
 
-    const saved = ManifestationService.saveEntry(entry);
-    if (saved) {
-      setSaveState('saved');
-      ManifestationService.clearForm();
-      setTimeout(() => setSaveState('idle'), 2000);
-    } else {
-      setSaveState('error', 'Failed to save entry. Check localStorage availability.');
-    }
-  });
+  saveManifestationBtn.addEventListener('click', () => saveToTab(
+    ManifestationService,
+    (entry) => ManifestationService.sections.some((s) => entry[s.key])
+  ));
 
-  exportManifestationBtn.addEventListener('click', async () => {
+  analyzeBtn.addEventListener('click', async () => {
     if (!auth.isSignedIn) {
-      setSaveState('error', 'Sign in to Google first to export.');
+      setSaveState('error', 'Sign in to Google first to run analysis.');
       return;
     }
-
-    setSaveState('saving');
+    if (!docID) {
+      setSaveState('error', 'No Google Doc ID set. Click ⚙ to add one.');
+      return;
+    }
+    let entries;
     try {
       const token = await auth.freshAccessToken();
       if (!token) throw new Error('Could not refresh Google token.');
-
-      const entries = ManifestationService.getAllEntries();
-      await ManifestationExportService.exportToGoogleDrive(entries, token);
-
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 2000);
+      const tabText = await GoogleDocsService.readTabText(docID, token, CBTService.TAB_TITLE);
+      entries = PatternService.parseEntries(tabText)
+        .filter((e) => e.parsedDate)
+        .map((e) => CBTService.parseEntryBlock(e.text, e.parsedDate.toISOString()));
     } catch (err) {
-      console.error('[Manifestation] export error:', err);
+      console.error('[CBT] analysis fetch error:', err);
       setSaveState('error', err.message);
+      return;
     }
-  });
-
-  analyzeBtn.addEventListener('click', () => {
-    const entries = CBTService.getAllEntries();
     const analysis = CBTAnalyzer.analyze(entries);
-    
+
     cbtAnalysisCard.classList.remove('hidden');
     cbtAnalysisBody.replaceChildren();
     

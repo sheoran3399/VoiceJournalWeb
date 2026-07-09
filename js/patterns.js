@@ -12,7 +12,11 @@ const PatternService = {
   // Entries are prepended newest-first; each block starts with "[<timestamp>]".
   parseEntries(docText) {
     const entries = [];
-    const blockRegex = /^\[([^\]]+)\]\n([\s\S]*?)(?=^\[[^\]]+\]\n|\s*$)/gm;
+    // The end-of-block lookahead uses (?![\s\S]) rather than \s*$ — with the
+    // /m flag, $ matches before *any* newline, not just the end of the whole
+    // string, which previously truncated every multi-line entry body to its
+    // first line. (?![\s\S]) only succeeds at the true end of the document.
+    const blockRegex = /^\[([^\]]+)\]\n([\s\S]*?)(?=^\[[^\]]+\]\n|(?![\s\S]))/gm;
     let match;
     while ((match = blockRegex.exec(docText)) !== null) {
       const date = match[1].trim();

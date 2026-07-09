@@ -1,5 +1,5 @@
 const CBTService = {
-  STORAGE_KEY: 'cbt_entries',
+  TAB_TITLE: 'CBT Reflection',
 
   // Section definitions in causal CBT order
   sections: [
@@ -256,31 +256,75 @@ const CBTService = {
     });
   },
 
-  // localStorage management
-  loadEntries() {
-    try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      console.error('[CBT] Error loading entries:', e);
-      return [];
-    }
+  // Renders an entry as a "[timestamp]\nLabel: value\n..." block, matching
+  // the journal tab's own format so PatternService.parseEntries can read
+  // either one back.
+  formatEntryBlock(entry) {
+    const formatted = new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'full',
+      timeStyle: 'medium',
+    }).format(new Date(entry.created_at));
+    const lines = [`[${formatted}]`];
+
+    this.sections.forEach((section) => {
+      const value = entry[section.key] || '';
+      let annotation = '';
+      if (section.hasSlider) {
+        const sliderKey = section.key === 'emotion' ? 'emotion_intensity' : `${section.key}_intensity`;
+        if (entry[sliderKey] !== undefined) annotation += ` (Intensity: ${entry[sliderKey]})`;
+      }
+      if (section.hasDistortion && entry.distortion) {
+        annotation += ` (Distortion: ${entry.distortion})`;
+      }
+      // A distortion tag can exist even when the thought textarea is empty
+      // (e.g. a picked tag with no typed text) — still write the line so the
+      // tag survives the round trip through the Doc.
+      if (!value && !annotation) return;
+      lines.push(`${section.label}: ${value}${annotation}`);
+    });
+
+    lines.push('');
+    return lines.join('\n') + '\n';
   },
 
-  saveEntry(entry) {
-    try {
-      const entries = this.loadEntries();
-      entries.push(entry);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(entries));
-      return true;
-    } catch (e) {
-      console.error('[CBT] Error saving entry:', e);
-      return false;
-    }
-  },
+  // Reverses formatEntryBlock: given one parsed block's body text (as
+  // returned by PatternService.parseEntries) and its date, reconstructs the
+  // same shaped object readFormData() produces, so CBTAnalyzer keeps working
+  // unchanged against entries read back from the Doc tab.
+  parseEntryBlock(text, dateISO) {
+    const data = {
+      id: `cbt_${new Date(dateISO).getTime()}`,
+      type: 'cbt',
+      created_at: dateISO,
+    };
+    const lines = text.split('\n');
 
-  getAllEntries() {
-    return this.loadEntries();
+    this.sections.forEach((section) => {
+      const line = lines.find((l) => l.startsWith(`${section.label}: `));
+      if (!line) return;
+      let rest = line.slice(section.label.length + 2);
+
+      if (section.hasSlider) {
+        const sliderKey = section.key === 'emotion' ? 'emotion_intensity' : `${section.key}_intensity`;
+        const match = rest.match(/^(.*) \(Intensity: (\d+)\)$/);
+        if (match) {
+          rest = match[1];
+          data[sliderKey] = parseInt(match[2], 10);
+        }
+      }
+
+      if (section.hasDistortion) {
+        const match = rest.match(/^(.*) \(Distortion: (.*)\)$/);
+        if (match) {
+          rest = match[1];
+          data.distortion = match[2];
+        }
+      }
+
+      data[section.key] = rest;
+    });
+
+    return data;
   },
 };
 
