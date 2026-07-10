@@ -223,13 +223,27 @@
           </small>
         </label>
         <label class="field-label">
-          <span>Sister's PushPlus token (optional)</span>
-          <input type="text" id="wechatTokenInput" placeholder="Paste her PushPlus token"
+          <span>PushPlus token (optional)</span>
+          <input type="text" id="wechatTokenInput" placeholder="Paste a PushPlus token"
                  autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <small>
-            She gets this by following the PushPlus official account at
-            pushplus.plus and copying her personal token. Every journal
-            entry gets pushed to her WeChat automatically once this is set.
+            Get this by following the PushPlus official account at
+            pushplus.plus and copying your own personal token. This is always
+            your token, even when using the group code below to also reach
+            your sister.
+          </small>
+        </label>
+        <label class="field-label">
+          <span>WeChat group code (topic, optional)</span>
+          <input type="text" id="wechatTopicInput" placeholder="Paste a PushPlus group code"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <small>
+            Auto-reaches everyone who's joined this group — no separate token
+            needed from anyone else. One-time setup: on pushplus.plus, go to
+            发送消息 → 一对多消息 → 创建的群组 → 新建群组 to create one and
+            get its code (paste it here), then click 查看二维码 for a QR code
+            and send it to your sister — she scans it once in WeChat to join.
+            After that, every entry pushes to both of you automatically.
           </small>
         </label>
         <div class="field-label">
@@ -259,8 +273,10 @@
   <script src="js/insights-rewrite.js?v=1"></script>
   <script src="js/insights-export.js?v=1"></script>
   <script src="js/habit.js?v=2"></script>
-  <script src="js/wechat-push.js?v=1"></script>
+  <script src="js/wechat-push.js?v=2"></script>
   <script src="js/gmail-export.js?v=1"></script>
-  <script src="js/app.js?v=18"></script>
+  <script src="js/yuque-export.js?v=1"></script>
+  <script src="js/jinshan-export.js?v=1"></script>
+  <script src="js/app.js?v=21"></script>
 </body>
 </html>

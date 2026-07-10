@@ -7,22 +7,29 @@
 const WeChatPushService = {
   API_URL: 'https://www.pushplus.plus/send',
 
-  async pushEntry(recipientToken, text, date) {
+  // `topic` (optional) is a PushPlus group code: when set, PushPlus fans the
+  // message out to everyone who scanned that group's QR code to join, not
+  // just the token's own owner. The `token` here is still always the
+  // journal owner's personal token — group members never need their own
+  // token, only a one-time QR scan to join the group.
+  async pushEntry(recipientToken, text, date, topic = '') {
     if (!recipientToken) return;
     const formatted = new Intl.DateTimeFormat('en-US', {
       dateStyle: 'full',
       timeStyle: 'short',
     }).format(date);
+    const payload = {
+      token: recipientToken,
+      title: `Journal — ${formatted}`,
+      content: text,
+      template: 'txt',
+      channel: 'wechat',
+    };
+    if (topic) payload.topic = topic;
     const res = await fetch(this.API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: recipientToken,
-        title: `Journal — ${formatted}`,
-        content: text,
-        template: 'txt',
-        channel: 'wechat',
-      }),
+      body: JSON.stringify(payload),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok || body.code !== 200) {

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Hard-coded single journal document; localStorage can still override via Settings.
   let docID = localStorage.getItem('docID') || CONFIG.docID || '';
   let wechatToken = localStorage.getItem('wechatToken') || '';
+  let wechatTopic = localStorage.getItem('wechatTopic') || '';
 
   // DOM refs
   const authBanner   = document.getElementById('authBanner');
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modal        = document.getElementById('settingsModal');
   const docIDInput   = document.getElementById('docIDInput');
   const wechatTokenInput = document.getElementById('wechatTokenInput');
+  const wechatTopicInput = document.getElementById('wechatTopicInput');
   const cancelBtn    = document.getElementById('cancelSettings');
   const saveBtn      = document.getElementById('saveSettings');
   const signOutBtn   = document.getElementById('signOutBtn');
@@ -375,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // China with no doc/account to share). Never block or fail the
       // primary Google Docs save on this, and it's a no-op until a
       // recipient token is set in Settings.
-      WeChatPushService.pushEntry(wechatToken, text, date).catch((err) => {
+      WeChatPushService.pushEntry(wechatToken, text, date, wechatTopic).catch((err) => {
         console.error('[Journal] WeChat push failed:', err);
       });
       // Best-effort email mirror via Gmail API (readable from mainland
@@ -383,6 +385,18 @@ document.addEventListener('DOMContentLoaded', () => {
       // Docs save above — requires the gmail.send scope to be granted.
       GmailExportService.sendEntry(CONFIG.sisterEmail, text, date, token).catch((err) => {
         console.error('[Journal] Gmail send failed:', err);
+      });
+      // Best-effort mirror to Yuque (readable from mainland China via a
+      // public share link, no account needed on her end). No-op until the
+      // Cloudflare Worker route is wired up per YUQUE_SETUP.md.
+      YuqueExportService.appendEntry(text, date).catch((err) => {
+        console.error('[Journal] Yuque mirror failed:', err);
+      });
+      // Best-effort mirror to Kingsoft Docs (readable from mainland China).
+      // No-op until the Cloudflare Worker route is wired up per
+      // JINSHAN_SETUP.md.
+      JinshanExportService.appendEntry(text, date).catch((err) => {
+        console.error('[Journal] Jinshan mirror failed:', err);
       });
       // Best-effort: feed this entry into the Cognee knowledge graph. Never
       // blocks or fails the primary save — same pattern as WeChat/Gmail above.
@@ -925,6 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
   settingsBtn.addEventListener('click', () => {
     docIDInput.value = docID;
     wechatTokenInput.value = wechatToken;
+    wechatTopicInput.value = wechatTopic;
     signOutBtn.classList.toggle('hidden', !auth.isSignedIn);
     graphBackfillStatus.textContent = graphBackfillDefaultStatus;
     modal.classList.remove('hidden');
@@ -937,6 +952,8 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('docID', docID);
     wechatToken = wechatTokenInput.value.trim();
     localStorage.setItem('wechatToken', wechatToken);
+    wechatTopic = wechatTopicInput.value.trim();
+    localStorage.setItem('wechatTopic', wechatTopic);
     modal.classList.add('hidden');
   });
 
