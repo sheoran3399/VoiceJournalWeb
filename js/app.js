@@ -386,18 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
       GmailExportService.sendEntry(CONFIG.sisterEmail, text, date, token).catch((err) => {
         console.error('[Journal] Gmail send failed:', err);
       });
-      // Best-effort mirror to Yuque (readable from mainland China via a
-      // public share link, no account needed on her end). No-op until the
-      // Cloudflare Worker route is wired up per YUQUE_SETUP.md.
-      YuqueExportService.appendEntry(text, date).catch((err) => {
-        console.error('[Journal] Yuque mirror failed:', err);
-      });
-      // Best-effort mirror to Kingsoft Docs (readable from mainland China).
-      // No-op until the Cloudflare Worker route is wired up per
-      // JINSHAN_SETUP.md.
-      JinshanExportService.appendEntry(text, date).catch((err) => {
-        console.error('[Journal] Jinshan mirror failed:', err);
-      });
       // Best-effort: feed this entry into the Cognee knowledge graph. Never
       // blocks or fails the primary save — same pattern as WeChat/Gmail above.
       GraphService.ingest('Voice Journal', text, date, token).catch((err) => {

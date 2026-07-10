@@ -9,10 +9,8 @@ var CONFIG = {
   // Every journal entry gets emailed here too (QQ Mail is reachable from
   // mainland China, unlike Google Docs).
   sisterEmail: '317885013@qq.com',
-  // Base URL for the Cloudflare Worker proxy — AI features (reflection,
-  // English coach, etc.) plus the Yuque mirror route (/api/yuque-append, see
-  // YUQUE_SETUP.md), since both need a server-side secret and CORS relay.
-  // Production: the deployed Worker (secrets stay server-side).
+  // Base URL for the AI proxy (reflection + English coach).
+  // Production: the deployed Cloudflare Worker (key stays server-side as a secret).
   // For purely-local dev with server.py you can set this to '' to use same-origin.
   apiBase: 'https://voicejournal-api.sheoran3399.workers.dev',
   // Base URL for the Cognee knowledge-graph backend (separate Python service,
