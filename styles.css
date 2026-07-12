@@ -256,6 +256,29 @@ header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700;
 }
 .danger:hover { background: var(--oxblood-soft); }
 
+#manifestPicksFields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.picks-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  font-size: 14px;
+  font-family: var(--font-body);
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.picks-textarea:focus { border-color: var(--accent); }
+
 .hidden { display: none !important; }
 
 /* AI-generated content cards share one treatment: surface + left accent rule,

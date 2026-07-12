@@ -71,6 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const manifestationPanel = document.getElementById('manifestationPanel');
   const manifestationForm = document.getElementById('manifestationForm');
   const saveManifestationBtn = document.getElementById('saveManifestationBtn');
+  const editPicksBtn = document.getElementById('editPicksBtn');
+  const manifestPicksModal = document.getElementById('manifestPicksModal');
+  const manifestPicksFields = document.getElementById('manifestPicksFields');
+  const cancelManifestPicksBtn = document.getElementById('cancelManifestPicks');
+  const saveManifestPicksBtn = document.getElementById('saveManifestPicks');
+  const resetManifestPicksBtn = document.getElementById('resetManifestPicks');
 
   // Insights refs
   const insightsPanel = document.getElementById('insightsPanel');
@@ -788,6 +794,26 @@ document.addEventListener('DOMContentLoaded', () => {
     ManifestationService,
     (entry) => ManifestationService.sections.some((s) => entry[s.key])
   ));
+
+  // --- Manifestation quick-picks editor ---
+  editPicksBtn.addEventListener('click', () => {
+    ManifestationService.renderPicksEditor(manifestPicksFields);
+    manifestPicksModal.classList.remove('hidden');
+  });
+
+  cancelManifestPicksBtn.addEventListener('click', () => manifestPicksModal.classList.add('hidden'));
+
+  saveManifestPicksBtn.addEventListener('click', () => {
+    ManifestationService.savePicksEditor(manifestPicksFields);
+    ManifestationService.refreshDropdowns(manifestationForm);
+    manifestPicksModal.classList.add('hidden');
+  });
+
+  resetManifestPicksBtn.addEventListener('click', () => {
+    ManifestationService.resetAllPicks();
+    ManifestationService.renderPicksEditor(manifestPicksFields);
+    ManifestationService.refreshDropdowns(manifestationForm);
+  });
 
   analyzeBtn.addEventListener('click', async () => {
     if (!auth.isSignedIn) {

@@ -172,6 +172,7 @@
       </div>
       <div class="manifestation-actions">
         <button id="saveManifestationBtn" class="add-entry-btn">Save entry</button>
+        <button id="editPicksBtn" class="add-entry-btn secondary">✏️ Edit quick picks</button>
       </div>
     </div>
 
@@ -255,6 +256,29 @@
     </div>
   </div>
 
+  <!-- Manifestation quick-picks editor -->
+  <div id="manifestPicksModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Edit quick picks">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button id="cancelManifestPicks">Cancel</button>
+        <h2>Quick Picks</h2>
+        <button id="saveManifestPicks" class="bold">Save</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-label">
+          <small>
+            Edit the dropdown options for each Manifestation section, one item
+            per line. Changes take effect immediately, no code change needed.
+          </small>
+        </div>
+        <div id="manifestPicksFields">
+          <!-- Dynamically populated by manifestation.js -->
+        </div>
+        <button id="resetManifestPicks" class="danger">Reset all to defaults</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/config.js?v=8"></script>
   <script src="js/speech.js?v=8"></script>
   <script src="js/auth.js?v=8"></script>
@@ -268,13 +292,13 @@
   <script src="js/poem.js?v=1"></script>
   <script src="js/cbt.js?v=3"></script>
   <script src="js/drive-file.js?v=1"></script>
-  <script src="js/manifestation.js?v=2"></script>
+  <script src="js/manifestation.js?v=3"></script>
   <script src="js/insights.js?v=2"></script>
   <script src="js/insights-rewrite.js?v=1"></script>
   <script src="js/insights-export.js?v=1"></script>
   <script src="js/habit.js?v=2"></script>
   <script src="js/wechat-push.js?v=2"></script>
   <script src="js/gmail-export.js?v=1"></script>
-  <script src="js/app.js?v=23"></script>
+  <script src="js/app.js?v=24"></script>
 </body>
 </html>

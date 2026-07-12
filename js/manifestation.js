@@ -83,6 +83,93 @@ const ManifestationService = {
     },
   ],
 
+  // --- Quick-pick customization: overrides live in localStorage so the
+  // affirmation bank can be edited from Settings instead of requiring a
+  // code change + redeploy each time. `section.picks`/`distortionOptions`
+  // above remain the shipped defaults and the "reset" target.
+  _picksStorageKey(sectionKey) {
+    return `manifestPicks:${sectionKey}`;
+  },
+
+  _defaultPicks(section) {
+    return section.hasDistortion ? section.distortionOptions : section.picks;
+  },
+
+  getPicks(section) {
+    const raw = localStorage.getItem(this._picksStorageKey(section.key));
+    if (!raw) return this._defaultPicks(section);
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : this._defaultPicks(section);
+    } catch {
+      return this._defaultPicks(section);
+    }
+  },
+
+  setPicks(sectionKey, items) {
+    localStorage.setItem(this._picksStorageKey(sectionKey), JSON.stringify(items));
+  },
+
+  resetAllPicks() {
+    this.sections.forEach((section) => localStorage.removeItem(this._picksStorageKey(section.key)));
+  },
+
+  // Builds the "Edit quick picks" modal body: one labeled textarea per
+  // section, one item per line, prefilled with the current effective list.
+  renderPicksEditor(container) {
+    const fields = this.sections.map((section) => {
+      const picks = this.getPicks(section);
+      const label = document.createElement('label');
+      label.className = 'field-label';
+      const span = document.createElement('span');
+      span.textContent = section.label;
+      const textarea = document.createElement('textarea');
+      textarea.className = 'picks-textarea';
+      textarea.dataset.sectionKey = section.key;
+      textarea.rows = Math.min(8, Math.max(3, picks.length));
+      textarea.value = picks.join('\n');
+      textarea.setAttribute('aria-label', `${section.label} quick picks`);
+      const small = document.createElement('small');
+      small.textContent = 'One item per line.';
+      label.appendChild(span);
+      label.appendChild(textarea);
+      label.appendChild(small);
+      return label;
+    });
+    container.replaceChildren(...fields);
+  },
+
+  // Reads the editor's textareas back out and persists them.
+  savePicksEditor(container) {
+    container.querySelectorAll('textarea[data-section-key]').forEach((textarea) => {
+      const items = textarea.value.split('\n').map((s) => s.trim()).filter(Boolean);
+      this.setPicks(textarea.dataset.sectionKey, items);
+    });
+  },
+
+  // Repopulates the <option> lists of an already-rendered manifestation
+  // form in place, so editing quick picks doesn't wipe an in-progress
+  // draft the way a full renderForm() re-render would.
+  refreshDropdowns(form) {
+    this.sections.forEach((section) => {
+      const picks = this.getPicks(section);
+      const sectionEl = form.querySelector(`[data-key="${section.key}"]`);
+      if (!sectionEl) return;
+      const selector = section.hasDistortion ? '[data-type="belief-tag"]' : '[data-type="quick-pick"]';
+      const select = sectionEl.querySelector(selector);
+      if (!select) return;
+      const current = select.value;
+      select.querySelectorAll('option:not(:first-child)').forEach((o) => o.remove());
+      picks.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+      });
+      select.value = current;
+    });
+  },
+
   renderForm(container) {
     const form = document.createElement('div');
     form.className = 'manifestation-form';
@@ -96,6 +183,7 @@ const ManifestationService = {
   },
 
   _renderSection(section) {
+    const picks = this.getPicks(section);
     const sectionEl = document.createElement('div');
     sectionEl.className = 'cbt-section';
     sectionEl.dataset.key = section.key;
@@ -120,7 +208,7 @@ const ManifestationService = {
     sectionEl.appendChild(hint);
 
     // Dropdown (if applicable)
-    if (section.picks && section.picks.length > 0) {
+    if (!section.hasDistortion && picks && picks.length > 0) {
       const dropdown = document.createElement('select');
       dropdown.className = 'cbt-dropdown';
       dropdown.dataset.sectionKey = section.key;
@@ -129,7 +217,7 @@ const ManifestationService = {
       placeholder.value = '';
       placeholder.textContent = 'Quick pick…';
       dropdown.appendChild(placeholder);
-      section.picks.forEach((pick) => {
+      picks.forEach((pick) => {
         const option = document.createElement('option');
         option.value = pick;
         option.textContent = pick;
@@ -191,7 +279,7 @@ const ManifestationService = {
         beliefPlaceholder.value = '';
         beliefPlaceholder.textContent = 'Name the pattern...';
         beliefSelect.appendChild(beliefPlaceholder);
-        section.distortionOptions?.forEach((pattern) => {
+        picks?.forEach((pattern) => {
           const option = document.createElement('option');
           option.value = pattern;
           option.textContent = pattern;
@@ -206,7 +294,7 @@ const ManifestationService = {
     }
 
     // Attach event listener to dropdown for quick-pick append behavior
-    if (section.picks && section.picks.length > 0) {
+    if (!section.hasDistortion && picks && picks.length > 0) {
       const dropdown = sectionEl.querySelector('[data-type="quick-pick"]');
       const textarea = sectionEl.querySelector('.cbt-textarea');
       if (dropdown && textarea) {
