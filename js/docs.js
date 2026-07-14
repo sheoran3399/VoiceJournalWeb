@@ -107,14 +107,34 @@ const GoogleDocsService = {
     const json = await res.json();
     const tab = this._searchTabs(json.tabs, tabTitle);
     if (!tab) {
-      throw new Error(`Tab "${tabTitle}" not found. Add it in the Google Doc first (tab sidebar → right-click → Add tab) and name it exactly "${tabTitle}".`);
+      const found = this._listTitles(json.tabs);
+      const foundMsg = found.length ? ` Tabs found in this Doc: ${found.map(t => `"${t}"`).join(', ')}.` : ' This Doc has no tabs at all.';
+      throw new Error(`Tab "${tabTitle}" not found.${foundMsg} Add it in the Google Doc first (tab sidebar → right-click → Add tab) and name it exactly "${tabTitle}".`);
     }
     return tab;
   },
 
-  _searchTabs(tabs, title) {
+  // Flattens all tab titles (including nested childTabs) for error messages —
+  // lets a "not found" failure show what's actually there instead of forcing
+  // a console/network trip to see why the name didn't match.
+  _listTitles(tabs) {
+    const titles = [];
     for (const tab of tabs || []) {
-      if (tab.tabProperties?.title === title) return tab;
+      if (tab.tabProperties?.title) titles.push(tab.tabProperties.title);
+      titles.push(...this._listTitles(tab.childTabs));
+    }
+    return titles;
+  },
+
+  // Case-insensitive, whitespace-trimmed match — tab titles are hand-typed
+  // in the Google Docs UI, so "Book v0", "book v0 " (trailing space), etc.
+  // should all still resolve rather than silently reporting "not found".
+  // Recurses into childTabs since the Docs API supports nested tabs.
+  _searchTabs(tabs, title) {
+    const target = (title || '').trim().toLowerCase();
+    for (const tab of tabs || []) {
+      const candidate = (tab.tabProperties?.title || '').trim().toLowerCase();
+      if (candidate === target) return tab;
       const nested = this._searchTabs(tab.childTabs, title);
       if (nested) return nested;
     }

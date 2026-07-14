@@ -1202,3 +1202,45 @@ header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700;
   opacity: 1;
   filter: none;
 }
+
+/* Decade patterns (book v0/v1 vs. current entry, 10-year stubborn-pattern
+   analysis) — reuses .patterns-card/.patterns-header/.patterns-title/
+   .patterns-body for the "Stubborn Patterns" section; "My Own
+   Recommendations" gets the sage calm/positive treatment (same semantic
+   color as .cbt-insight) so the two sections read as visually distinct
+   without introducing a new per-feature accent. */
+.decade-intro-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.decade-section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.decade-recommendations-header { margin-bottom: 10px; }
+
+.decade-recommendations-body {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--sage);
+  background: var(--sage-soft);
+  padding: 12px 14px;
+  border-radius: var(--radius-input);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.decade-recommendations-body.loading {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: none;
+  padding: 0;
+}

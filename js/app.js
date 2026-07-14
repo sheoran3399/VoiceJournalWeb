@@ -1,4 +1,10 @@
-const speech = new SpeechRecognizer();
+let speech;
+try {
+  speech = new SpeechRecognizer();
+} catch (err) {
+  console.warn('[Journal] Speech recognition unavailable:', err.message);
+  speech = null;
+}
 const auth = new GoogleAuthManager(CONFIG.googleClientID);
 
 // Initialize Google Identity Services after all scripts (including GIS) have loaded
@@ -92,6 +98,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const habitRewardCard = document.getElementById('habitRewardCard');
   const habitCalendar = document.getElementById('habitCalendar');
   const refreshJournalDaysBtn = document.getElementById('refreshJournalDaysBtn');
+
+  // Decade patterns refs (Cognee graph: book v0/v1 vs. current entry)
+  const decadePanel = document.getElementById('decadePanel');
+  const decadeIngestBtn = document.getElementById('decadeIngestBtn');
+  const decadeIngestStatus = document.getElementById('decadeIngestStatus');
+  const decadeIngestDefaultStatus = decadeIngestStatus.textContent;
+  const decadeAnalyzeBtn = document.getElementById('decadeAnalyzeBtn');
+  const decadePatternsCard = document.getElementById('decadePatternsCard');
+  const decadePatternsBody = document.getElementById('decadePatternsBody');
+  const decadeRecommendationsBody = document.getElementById('decadeRecommendationsBody');
+  const BOOK_TAB_TITLES = ['book v0', 'book v1'];
+
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const today = new Date();
   let habitViewYear = today.getFullYear();
@@ -151,10 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
       addVoiceEntryBtn.disabled = false;
       // During recording: always overwrite with live text (user can't type)
       // After recording: only set content if the user hasn't manually edited it
-      if (speech.isRecording || !transcriptUserEdited) {
+      if (speech?.isRecording || !transcriptUserEdited) {
         transcriptEl.textContent = text;
       }
-      transcriptEl.contentEditable = speech.isRecording ? 'false' : 'true';
+      transcriptEl.contentEditable = speech?.isRecording ? 'false' : 'true';
     } else {
       transcriptEl.textContent = '';
       transcriptEl.classList.add('hidden');
@@ -196,6 +214,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     pendingEntry = { text: cleanText, date: new Date() };
     setSaveState('idle');
+    // Fire the sister-email mirror immediately off "Add entry" — do not wait
+    // for the gratitude prompts or the "reflect" step that follows. (Bug fix
+    // 2026-07-13: this used to be nested inside finalizeReflection()/save(),
+    // so it silently never sent until the user finished the CBT/gratitude
+    // flow.) Best-effort — never blocks staging or surfaces its own errors.
+    sendSisterEmailNow(pendingEntry.text, pendingEntry.date);
     // Render AI-personalised prompts (falls back to smart client-side selection)
     GratitudePrompts.renderDynamic(gratitudeList, cleanText).catch(() => {
       GratitudePrompts.render(gratitudeList);
@@ -205,52 +229,73 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
-  // --- Speech ---
-  speech.onTranscriptChange = (text) => {
-    liveTranscript = text || '';
-    renderTranscript();
-  };
-
-  speech.onTranscriptFinalized = async (text) => {
-    console.log('[Journal] transcript finalized (' + text.length + ' chars)');
-    draftTranscript = appendTranscript(draftTranscript, text);
-    liveTranscript = '';
-    renderTranscript();
-    updateRecordBtn();
-    if (finalizeAfterStop) {
-      finalizeAfterStop = false;
-      if (stageEntry(draftTranscript)) {
-        // Keep the draft visible until the user explicitly reflects or saves it.
-      }
+  // --- Sister-email mirror, decoupled from gratitude/reflection/save ---
+  // Uses the same OAuth token as the Docs save (gmail.send scope); silently
+  // no-ops if not signed in yet rather than forcing a sign-in prompt from
+  // what the user experiences as just tapping "Add entry".
+  async function sendSisterEmailNow(text, date) {
+    if (!auth.isSignedIn) return;
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) return;
+      await GmailExportService.sendEntry(CONFIG.sisterEmail, text, date, token);
+    } catch (err) {
+      console.error('[Journal] Gmail send failed:', err);
     }
-  };
+  }
 
-  speech.onNoSpeech = () => {
-    setSaveState('error', "Can't hear you — speak louder or check mic in Chrome settings (⋮ → Settings → Privacy → Microphone).");
-  };
-
-  speech.onStop = () => {
-    setSaveState('idle');
-    updateRecordBtn();
-  };
-
-  speech.onError = (error) => {
-    const messages = {
-      'not-allowed': 'Microphone access denied. Check Chrome site permissions for localhost:8000.',
-      'network':     navigator.onLine
-        ? 'Network error — try on-device speech if your browser supports it.'
-        : (speech.offlineCapable
-          ? 'Offline speech recognition is unavailable in this browser. Try Chrome with on-device speech enabled.'
-          : 'You are offline, and this browser does not support on-device speech recognition.'),
-      'audio-capture': 'No microphone found. Check your input device.',
-      'service-not-allowed': 'Speech service blocked. Try reloading the page.',
+  // --- Speech ---
+  if (speech) {
+    speech.onTranscriptChange = (text) => {
+      liveTranscript = text || '';
+      renderTranscript();
     };
-    setSaveState('error', messages[error] || `Speech error: ${error}`);
-    updateRecordBtn();
-  };
+
+    speech.onTranscriptFinalized = async (text) => {
+      console.log('[Journal] transcript finalized (' + text.length + ' chars)');
+      draftTranscript = appendTranscript(draftTranscript, text);
+      liveTranscript = '';
+      renderTranscript();
+      updateRecordBtn();
+      if (finalizeAfterStop) {
+        finalizeAfterStop = false;
+        if (stageEntry(draftTranscript)) {
+          // Keep the draft visible until the user explicitly reflects or saves it.
+        }
+      }
+    };
+
+    speech.onNoSpeech = () => {
+      setSaveState('error', "Can't hear you — speak louder or check mic in Chrome settings (⋮ → Settings → Privacy → Microphone).");
+    };
+
+    speech.onStop = () => {
+      setSaveState('idle');
+      updateRecordBtn();
+    };
+
+    speech.onError = (error) => {
+      const messages = {
+        'not-allowed': 'Microphone access denied. Check Chrome site permissions for localhost:8000.',
+        'network':     navigator.onLine
+          ? 'Network error — try on-device speech if your browser supports it.'
+          : (speech.offlineCapable
+            ? 'Offline speech recognition is unavailable in this browser. Try Chrome with on-device speech enabled.'
+            : 'You are offline, and this browser does not support on-device speech recognition.'),
+        'audio-capture': 'No microphone found. Check your input device.',
+        'service-not-allowed': 'Speech service blocked. Try reloading the page.',
+      };
+      setSaveState('error', messages[error] || `Speech error: ${error}`);
+      updateRecordBtn();
+    };
+  }
 
   // --- Record button ---
   recordBtn.addEventListener('click', () => {
+    if (!speech) {
+      setSaveState('error', "Voice recording needs Chrome or Edge — this browser doesn't support it.");
+      return;
+    }
     if (speech.isRecording) {
       setSaveState('idle');
       speech.stop();
@@ -289,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function updateRecordBtn() {
-    const recording = speech.isRecording;
+    const recording = speech?.isRecording;
     recordBtn.classList.toggle('recording', recording);
     micIcon.textContent = recording ? '⏹' : '🎤';
   }
@@ -311,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Reflection happens only when the user finishes the prompt and taps Reflect.
   reflectBtn.addEventListener('click', () => {
-    if (speech.isRecording) {
+    if (speech?.isRecording) {
      finalizeAfterStop = true;
      speech.stop();
      return;
@@ -386,12 +431,9 @@ document.addEventListener('DOMContentLoaded', () => {
       WeChatPushService.pushEntry(wechatToken, text, date, wechatTopic).catch((err) => {
         console.error('[Journal] WeChat push failed:', err);
       });
-      // Best-effort email mirror via Gmail API (readable from mainland
-      // China via 163.com, unlike Google Docs itself). Same token as the
-      // Docs save above — requires the gmail.send scope to be granted.
-      GmailExportService.sendEntry(CONFIG.sisterEmail, text, date, token).catch((err) => {
-        console.error('[Journal] Gmail send failed:', err);
-      });
+      // Note: the sister-email mirror is no longer sent from here — it now
+      // fires directly off "Add entry" (see sendSisterEmailNow(), called
+      // from stageEntry()) so it doesn't wait on gratitude/reflection/save.
       // Best-effort: feed this entry into the Cognee knowledge graph. Never
       // blocks or fails the primary save — same pattern as WeChat/Gmail above.
       GraphService.ingest('Voice Journal', text, date, token).catch((err) => {
@@ -585,6 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
     insightsPanel.classList.toggle('hidden', tabName !== 'insights');
     habitsPanel.classList.toggle('active', tabName === 'habits');
     habitsPanel.classList.toggle('hidden', tabName !== 'habits');
+    decadePanel.classList.toggle('active', tabName === 'decade');
+    decadePanel.classList.toggle('hidden', tabName !== 'decade');
 
     if (tabName === 'cbt') {
       // Initialize CBT form on first switch
@@ -604,6 +648,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabName === 'habits') {
       habitEditingReward = false;
       renderHabitsTab();
+    }
+    if (tabName === 'decade' && !decadeIngestBtn.disabled) {
+      decadeIngestStatus.textContent = decadeIngestDefaultStatus;
     }
   }
 
@@ -911,6 +958,110 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('[Graph] patterns error:', err);
       setGraphCardState(graphPatternsCard, graphPatternsBody, 'error', err.message);
+    }
+  });
+
+  // --- Decade patterns: ingest book v0/v1, then compare the current
+  // (possibly unsaved) Voice entry against them + the rest of the graph ---
+
+  // Reads whatever the user currently has in the Voice journal entry box —
+  // typed text takes priority, then a staged-but-not-yet-saved voice entry,
+  // then the live/in-progress voice transcript. Never a saved Doc entry.
+  function getCurrentVoiceEntryText() {
+    const typed = manualInput.value.trim();
+    if (typed) return typed;
+    if (pendingEntry && pendingEntry.text) return pendingEntry.text;
+    return getVisibleTranscript();
+  }
+
+  function setDecadeCardState(state, patternsText = '', recommendationsText = '') {
+    decadePatternsCard.classList.remove('hidden');
+    decadePatternsBody.className = 'patterns-body';
+    decadeRecommendationsBody.className = 'decade-recommendations-body';
+    if (state === 'loading') {
+      decadePatternsBody.classList.add('loading');
+      decadePatternsBody.textContent = patternsText;
+      decadeRecommendationsBody.classList.add('loading');
+      decadeRecommendationsBody.textContent = '';
+    } else if (state === 'error') {
+      decadePatternsBody.classList.add('patterns-error');
+      decadePatternsBody.textContent = '⚠ ' + patternsText;
+      decadeRecommendationsBody.textContent = '';
+    } else {
+      decadePatternsBody.textContent = patternsText;
+      decadeRecommendationsBody.textContent = recommendationsText;
+    }
+  }
+
+  // One-time/on-demand ingest of the two book tabs — not tied to the save
+  // flow, so it never re-runs on every keystroke (same reasoning as the
+  // full-history graph backfill in Settings).
+  decadeIngestBtn.addEventListener('click', async () => {
+    if (!auth.isSignedIn) {
+      decadeIngestStatus.textContent = '⚠ Sign in to Google first.';
+      return;
+    }
+    if (!docID) {
+      decadeIngestStatus.textContent = '⚠ No Google Doc ID set. Click ⚙ to add one.';
+      return;
+    }
+    decadeIngestBtn.disabled = true;
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Could not refresh Google token.');
+      let done = 0;
+      const problems = []; // per-tab failure/skip reasons, so the final
+      // summary line doesn't swallow *why* a tab wasn't ingested.
+      for (const tab of BOOK_TAB_TITLES) {
+        decadeIngestStatus.textContent = `Reading "${tab}"…`;
+        let text;
+        try {
+          text = await GoogleDocsService.readTabText(docID, token, tab);
+        } catch (err) {
+          console.error(`[Decade] could not read "${tab}":`, err);
+          problems.push(`"${tab}": ${err.message}`);
+          continue;
+        }
+        if (!text.trim()) {
+          console.warn(`[Decade] "${tab}" is empty — nothing to ingest.`);
+          problems.push(`"${tab}": empty, nothing to ingest`);
+          continue;
+        }
+        decadeIngestStatus.textContent = `Ingesting "${tab}" into the graph…`;
+        try {
+          await GraphService.ingest(tab, text, new Date(), token, { sync: true });
+          done += 1;
+        } catch (err) {
+          console.error(`[Decade] could not ingest "${tab}":`, err);
+          problems.push(`"${tab}": ${err.message}`);
+        }
+      }
+      const summary = `Ingested ${done}/${BOOK_TAB_TITLES.length} book tab(s) into the graph.`;
+      decadeIngestStatus.textContent = problems.length ? `⚠ ${summary} ${problems.join(' ')}` : summary;
+      if (problems.length) console.error('[Decade] book ingest problems:', problems);
+    } catch (err) {
+      console.error('[Decade] book ingest error:', err);
+      decadeIngestStatus.textContent = `⚠ ${err.message}`;
+    } finally {
+      decadeIngestBtn.disabled = false;
+    }
+  });
+
+  decadeAnalyzeBtn.addEventListener('click', async () => {
+    const currentEntryText = getCurrentVoiceEntryText();
+    if (!currentEntryText) {
+      setDecadeCardState('error', 'Write or record something in the Voice journal tab first — this compares your current entry, not a saved one.');
+      return;
+    }
+    setDecadeCardState('loading', 'Comparing your current entry against the last 10 years…');
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Sign in to Google first.');
+      const { patterns, my_own_recommendations } = await GraphService.decadePatterns(token, currentEntryText);
+      setDecadeCardState('result', patterns, my_own_recommendations);
+    } catch (err) {
+      console.error('[Graph] decade patterns error:', err);
+      setDecadeCardState('error', err.message);
     }
   });
 

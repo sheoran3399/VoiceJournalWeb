@@ -72,4 +72,24 @@ const GraphService = {
     }
     return data;
   },
+
+  // Decade patterns tab's "Analyze across 10 years" — posts the user's
+  // *current*, possibly-unsaved Voice journal entry text (never a saved tab)
+  // so the backend can compare it against book v0/v1 (ingested separately —
+  // see the decade tab's "Ingest book v0 & v1" button in app.js) plus the
+  // rest of the shared graph. Returns { patterns, my_own_recommendations,
+  // related } — two distinct fields so the frontend renders them as two
+  // clearly separated sections instead of one blob of text.
+  async decadePatterns(token, currentEntryText) {
+    const res = await fetch(`${this._base()}/api/graph/decade-patterns`, {
+      method: 'POST',
+      headers: this._headers(token),
+      body: JSON.stringify({ current_entry: currentEntryText }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || `Decade pattern lookup failed (${res.status}).`);
+    }
+    return data;
+  },
 };

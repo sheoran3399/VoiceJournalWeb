@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
   <!-- Google Identity Services — loads async, app.js initializes it on window load -->
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script>
@@ -48,6 +48,10 @@
       <button class="tab-btn" data-tab="habits" aria-label="Habit tracking tab">
         <span class="tab-icon">🗓️</span>
         <span class="tab-label">Habits</span>
+      </button>
+      <button class="tab-btn" data-tab="decade" aria-label="Decade patterns tab">
+        <span class="tab-icon">📚</span>
+        <span class="tab-label">Decade patterns</span>
       </button>
     </div>
 
@@ -203,6 +207,37 @@
       <div id="habitCalendar"></div>
       <button id="refreshJournalDaysBtn" class="add-entry-btn secondary">Refresh check-ins</button>
     </div>
+
+    <!-- Decade patterns panel (new) -->
+    <div id="decadePanel" class="tab-panel hidden">
+      <p class="decade-intro-text">
+        Compares whatever's currently written in the Voice journal box —
+        saved or not — against "book v0" and "book v1", the two books you
+        wrote about your own life almost ten years ago, to find patterns
+        that have stuck around essentially unchanged, plus the
+        recommendations you already gave yourself back then.
+      </p>
+      <div class="field-label">
+        <button id="decadeIngestBtn" class="add-entry-btn secondary">🕸 Ingest book v0 &amp; v1 into graph</button>
+        <small id="decadeIngestStatus">One-time step: reads the "book v0" and "book v1" Doc tabs and feeds them into the shared Cognee graph, so the analysis below has ten-year-old material to compare against. Re-run only if those tabs change.</small>
+      </div>
+      <button id="decadeAnalyzeBtn" class="add-entry-btn">🕸 Analyze across 10 years</button>
+      <!-- Cognee-backed: compares the live (possibly unsaved) Voice entry
+           against book v0/v1 + the rest of the shared graph — see
+           GraphService.decadePatterns() and build_decade_pattern_query()
+           in VoiceJournalGraph/main.py. -->
+      <div id="decadePatternsCard" class="patterns-card hidden">
+        <div class="patterns-header">
+          <span class="patterns-title">🕸 Stubborn Patterns (10 Years)</span>
+        </div>
+        <div id="decadePatternsBody" class="patterns-body"></div>
+        <hr class="decade-section-divider">
+        <div class="patterns-header decade-recommendations-header">
+          <span class="patterns-title">📚 My Own Recommendations</span>
+        </div>
+        <div id="decadeRecommendationsBody" class="decade-recommendations-body"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Settings sheet -->
@@ -282,8 +317,8 @@
   <script src="js/config.js?v=8"></script>
   <script src="js/speech.js?v=8"></script>
   <script src="js/auth.js?v=8"></script>
-  <script src="js/docs.js?v=8"></script>
-  <script src="js/graph.js?v=2"></script>
+  <script src="js/docs.js?v=9"></script>
+  <script src="js/graph.js?v=3"></script>
   <script src="js/prompts.js?v=9"></script>
   <script src="js/therapist.js?v=8"></script>
   <script src="js/coach.js?v=9"></script>
@@ -299,6 +334,6 @@
   <script src="js/habit.js?v=2"></script>
   <script src="js/wechat-push.js?v=2"></script>
   <script src="js/gmail-export.js?v=1"></script>
-  <script src="js/app.js?v=24"></script>
+  <script src="js/app.js?v=28"></script>
 </body>
 </html>
