@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,500&family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=16">
   <!-- Google Identity Services — loads async, app.js initializes it on window load -->
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script>
@@ -32,14 +32,6 @@
       <button class="tab-btn active" data-tab="voice" aria-label="Voice Journal tab">
         <span class="tab-icon">🎤</span>
         <span class="tab-label">Voice</span>
-      </button>
-      <button class="tab-btn" data-tab="cbt" aria-label="CBT Reflection tab">
-        <span class="tab-icon">🧠</span>
-        <span class="tab-label">CBT reflection</span>
-      </button>
-      <button class="tab-btn" data-tab="manifestation" aria-label="Manifestation tab">
-        <span class="tab-icon">✨</span>
-        <span class="tab-label">Manifestation</span>
       </button>
       <button class="tab-btn" data-tab="insights" aria-label="Insights tab">
         <span class="tab-icon">📝</span>
@@ -139,45 +131,59 @@
       </div>
       <div id="graphRecallBody" class="patterns-body"></div>
     </div>
+
+    <!-- CBT reflection, merged in as a collapsible section of the Voice tab -->
+    <div class="accordion-section">
+      <button class="accordion-header" id="cbtAccordionToggle" aria-expanded="false" aria-controls="cbtAccordionBody">
+        <span class="accordion-icon">🧠</span>
+        <span class="accordion-title">CBT Reflection</span>
+        <span class="accordion-chevron">⌄</span>
+      </button>
+      <div id="cbtAccordionBody" class="accordion-body hidden">
+        <div id="cbtForm" class="cbt-form">
+          <!-- Dynamically populated by cbt.js -->
+        </div>
+        <div class="cbt-actions">
+          <button id="saveCBTBtn" class="add-entry-btn">Save entry</button>
+          <button id="analyzeBtn" class="add-entry-btn secondary">Run pattern analysis</button>
+          <button id="graphPatternsBtn" class="add-entry-btn secondary">🕸 Recurring patterns</button>
+        </div>
+        <div id="cbtAnalysisCard" class="cbt-analysis-card hidden">
+          <div class="cbt-analysis-header">
+            <span class="cbt-analysis-title">📊 Pattern Analysis</span>
+          </div>
+          <div id="cbtAnalysisBody" class="cbt-analysis-body"></div>
+        </div>
+        <!-- Cognee-backed: multi-hop patterns across the shared graph (Voice +
+             CBT + Manifestation), not just this tab's own text — see
+             GraphService.cbtPatterns() and build_pattern_query() in
+             VoiceJournalGraph/main.py. -->
+        <div id="graphPatternsCard" class="patterns-card hidden">
+          <div class="patterns-header">
+            <span class="patterns-title">🕸 Recurring Patterns</span>
+          </div>
+          <div id="graphPatternsBody" class="patterns-body"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- CBT reflection panel (new) -->
-    <div id="cbtPanel" class="tab-panel hidden">
-      <div id="cbtForm" class="cbt-form">
-        <!-- Dynamically populated by cbt.js -->
-      </div>
-      <div class="cbt-actions">
-        <button id="saveCBTBtn" class="add-entry-btn">Save entry</button>
-        <button id="analyzeBtn" class="add-entry-btn secondary">Run pattern analysis</button>
-        <button id="graphPatternsBtn" class="add-entry-btn secondary">🕸 Recurring patterns</button>
-      </div>
-      <div id="cbtAnalysisCard" class="cbt-analysis-card hidden">
-        <div class="cbt-analysis-header">
-          <span class="cbt-analysis-title">📊 Pattern Analysis</span>
+    <!-- Manifestation, merged in as a collapsible section of the Voice tab -->
+    <div class="accordion-section">
+      <button class="accordion-header" id="manifestationAccordionToggle" aria-expanded="false" aria-controls="manifestationAccordionBody">
+        <span class="accordion-icon">✨</span>
+        <span class="accordion-title">Manifestation</span>
+        <span class="accordion-chevron">⌄</span>
+      </button>
+      <div id="manifestationAccordionBody" class="accordion-body hidden">
+        <div id="manifestationForm" class="manifestation-form">
+          <!-- Dynamically populated by manifestation.js -->
         </div>
-        <div id="cbtAnalysisBody" class="cbt-analysis-body"></div>
-      </div>
-      <!-- Cognee-backed: multi-hop patterns across the shared graph (Voice +
-           CBT + Manifestation), not just this tab's own text — see
-           GraphService.cbtPatterns() and build_pattern_query() in
-           VoiceJournalGraph/main.py. -->
-      <div id="graphPatternsCard" class="patterns-card hidden">
-        <div class="patterns-header">
-          <span class="patterns-title">🕸 Recurring Patterns</span>
+        <div class="manifestation-actions">
+          <button id="saveManifestationBtn" class="add-entry-btn">Save entry</button>
+          <button id="editPicksBtn" class="add-entry-btn secondary">✏️ Edit quick picks</button>
         </div>
-        <div id="graphPatternsBody" class="patterns-body"></div>
       </div>
     </div>
-
-    <!-- Manifestation panel (new) -->
-    <div id="manifestationPanel" class="tab-panel hidden">
-      <div id="manifestationForm" class="manifestation-form">
-        <!-- Dynamically populated by manifestation.js -->
-      </div>
-      <div class="manifestation-actions">
-        <button id="saveManifestationBtn" class="add-entry-btn">Save entry</button>
-        <button id="editPicksBtn" class="add-entry-btn secondary">✏️ Edit quick picks</button>
-      </div>
     </div>
 
     <!-- Insights panel (new) -->
@@ -258,30 +264,6 @@
             docs.google.com/document/d/<strong>[THIS PART]</strong>/edit
           </small>
         </label>
-        <label class="field-label">
-          <span>PushPlus token (optional)</span>
-          <input type="text" id="wechatTokenInput" placeholder="Paste a PushPlus token"
-                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <small>
-            Get this by following the PushPlus official account at
-            pushplus.plus and copying your own personal token. This is always
-            your token, even when using the group code below to also reach
-            your sister.
-          </small>
-        </label>
-        <label class="field-label">
-          <span>WeChat group code (topic, optional)</span>
-          <input type="text" id="wechatTopicInput" placeholder="Paste a PushPlus group code"
-                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <small>
-            Auto-reaches everyone who's joined this group — no separate token
-            needed from anyone else. One-time setup: on pushplus.plus, go to
-            发送消息 → 一对多消息 → 创建的群组 → 新建群组 to create one and
-            get its code (paste it here), then click 查看二维码 for a QR code
-            and send it to your sister — she scans it once in WeChat to join.
-            After that, every entry pushes to both of you automatically.
-          </small>
-        </label>
         <div class="field-label">
           <button id="graphBackfillBtn" class="add-entry-btn secondary">🕸 Wipe &amp; backfill graph from full history</button>
           <small id="graphBackfillStatus">Rebuilds the Cognee knowledge graph from every saved Voice, CBT, and Manifestation entry — wipes existing graph data first, then re-ingests your full history so cross-tab recall/patterns cover everything, not just entries saved from now on.</small>
@@ -332,8 +314,7 @@
   <script src="js/insights-rewrite.js?v=1"></script>
   <script src="js/insights-export.js?v=1"></script>
   <script src="js/habit.js?v=2"></script>
-  <script src="js/wechat-push.js?v=2"></script>
   <script src="js/gmail-export.js?v=1"></script>
-  <script src="js/app.js?v=28"></script>
+  <script src="js/app.js?v=30"></script>
 </body>
 </html>

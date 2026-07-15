@@ -13,8 +13,8 @@ const GraphService = {
 
   // By default, fire-and-forget: feeds one entry into the shared graph.
   // Callers should .catch() this themselves (same "best-effort mirror"
-  // pattern as WeChatPushService/GmailExportService) so a graph outage never
-  // blocks or fails the primary Google Docs save.
+  // pattern as GmailExportService) so a graph outage never blocks or fails
+  // the primary Google Docs save.
   // Pass { sync: true } (used by the one-time full-history backfill) to
   // await actual completion instead of just the 202 accept — lets a bulk
   // import process entries one at a time instead of firing dozens of

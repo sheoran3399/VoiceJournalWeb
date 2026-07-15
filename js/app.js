@@ -13,8 +13,6 @@ window.addEventListener('load', () => auth.init());
 document.addEventListener('DOMContentLoaded', () => {
   // Hard-coded single journal document; localStorage can still override via Settings.
   let docID = localStorage.getItem('docID') || CONFIG.docID || '';
-  let wechatToken = localStorage.getItem('wechatToken') || '';
-  let wechatTopic = localStorage.getItem('wechatTopic') || '';
 
   // DOM refs
   const authBanner   = document.getElementById('authBanner');
@@ -28,8 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   const modal        = document.getElementById('settingsModal');
   const docIDInput   = document.getElementById('docIDInput');
-  const wechatTokenInput = document.getElementById('wechatTokenInput');
-  const wechatTopicInput = document.getElementById('wechatTopicInput');
   const cancelBtn    = document.getElementById('cancelSettings');
   const saveBtn      = document.getElementById('saveSettings');
   const signOutBtn   = document.getElementById('signOutBtn');
@@ -59,22 +55,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const graphRecallCard  = document.getElementById('graphRecallCard');
   const graphRecallBody  = document.getElementById('graphRecallBody');
 
-  // CBT refs
+  // CBT refs — merged into the Voice tab as a collapsible accordion section
   const voicePanel = document.getElementById('voicePanel');
-  const cbtPanel = document.getElementById('cbtPanel');
+  const cbtAccordionToggle = document.getElementById('cbtAccordionToggle');
+  const cbtAccordionBody = document.getElementById('cbtAccordionBody');
   const cbtForm = document.getElementById('cbtForm');
   const saveCBTBtn = document.getElementById('saveCBTBtn');
   const analyzeBtn = document.getElementById('analyzeBtn');
   const cbtAnalysisCard = document.getElementById('cbtAnalysisCard');
   const cbtAnalysisBody = document.getElementById('cbtAnalysisBody');
-  // Cognee graph refs (CBT tab: "Recurring patterns")
+  // Cognee graph refs (CBT section: "Recurring patterns")
   const graphPatternsBtn  = document.getElementById('graphPatternsBtn');
   const graphPatternsCard = document.getElementById('graphPatternsCard');
   const graphPatternsBody = document.getElementById('graphPatternsBody');
   const tabButtons = document.querySelectorAll('.tab-btn');
 
-  // Manifestation refs
-  const manifestationPanel = document.getElementById('manifestationPanel');
+  // Manifestation refs — merged into the Voice tab as a collapsible accordion section
+  const manifestationAccordionToggle = document.getElementById('manifestationAccordionToggle');
+  const manifestationAccordionBody = document.getElementById('manifestationAccordionBody');
   const manifestationForm = document.getElementById('manifestationForm');
   const saveManifestationBtn = document.getElementById('saveManifestationBtn');
   const editPicksBtn = document.getElementById('editPicksBtn');
@@ -424,18 +422,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       console.log('[Journal] saved successfully');
       setSaveState('saved');
-      // Best-effort mirror to WeChat via PushPlus (readable from mainland
-      // China with no doc/account to share). Never block or fail the
-      // primary Google Docs save on this, and it's a no-op until a
-      // recipient token is set in Settings.
-      WeChatPushService.pushEntry(wechatToken, text, date, wechatTopic).catch((err) => {
-        console.error('[Journal] WeChat push failed:', err);
-      });
       // Note: the sister-email mirror is no longer sent from here — it now
       // fires directly off "Add entry" (see sendSisterEmailNow(), called
       // from stageEntry()) so it doesn't wait on gratitude/reflection/save.
       // Best-effort: feed this entry into the Cognee knowledge graph. Never
-      // blocks or fails the primary save — same pattern as WeChat/Gmail above.
+      // blocks or fails the primary save — same pattern as Gmail above.
       GraphService.ingest('Voice Journal', text, date, token).catch((err) => {
         console.error('[Journal] Graph ingest failed:', err);
       });
@@ -619,10 +610,6 @@ document.addEventListener('DOMContentLoaded', () => {
     tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tabName));
     voicePanel.classList.toggle('active', tabName === 'voice');
     voicePanel.classList.toggle('hidden', tabName !== 'voice');
-    cbtPanel.classList.toggle('active', tabName === 'cbt');
-    cbtPanel.classList.toggle('hidden', tabName !== 'cbt');
-    manifestationPanel.classList.toggle('active', tabName === 'manifestation');
-    manifestationPanel.classList.toggle('hidden', tabName !== 'manifestation');
     insightsPanel.classList.toggle('active', tabName === 'insights');
     insightsPanel.classList.toggle('hidden', tabName !== 'insights');
     habitsPanel.classList.toggle('active', tabName === 'habits');
@@ -630,18 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
     decadePanel.classList.toggle('active', tabName === 'decade');
     decadePanel.classList.toggle('hidden', tabName !== 'decade');
 
-    if (tabName === 'cbt') {
-      // Initialize CBT form on first switch
-      if (!cbtForm.querySelector('.cbt-section')) {
-        CBTService.renderForm(cbtForm);
-      }
-    }
-    if (tabName === 'manifestation') {
-      // Initialize manifestation form on first switch
-      if (!manifestationForm.querySelector('.cbt-section')) {
-        ManifestationService.renderForm(manifestationForm);
-      }
-    }
     if (tabName === 'insights') {
       renderInsightsList();
     }
@@ -653,6 +628,26 @@ document.addEventListener('DOMContentLoaded', () => {
       decadeIngestStatus.textContent = decadeIngestDefaultStatus;
     }
   }
+
+  // --- CBT / Manifestation accordion sections (merged into the Voice tab) ---
+  function toggleAccordion(toggleBtn, body, renderOnce) {
+    const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    toggleBtn.setAttribute('aria-expanded', String(!expanded));
+    body.classList.toggle('hidden', expanded);
+    if (!expanded) renderOnce();
+  }
+
+  cbtAccordionToggle.addEventListener('click', () => {
+    toggleAccordion(cbtAccordionToggle, cbtAccordionBody, () => {
+      if (!cbtForm.querySelector('.cbt-section')) CBTService.renderForm(cbtForm);
+    });
+  });
+
+  manifestationAccordionToggle.addEventListener('click', () => {
+    toggleAccordion(manifestationAccordionToggle, manifestationAccordionBody, () => {
+      if (!manifestationForm.querySelector('.cbt-section')) ManifestationService.renderForm(manifestationForm);
+    });
+  });
 
   // --- Habit tracking ---
   function renderHabitsTab() {
@@ -1103,8 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Settings modal ---
   settingsBtn.addEventListener('click', () => {
     docIDInput.value = docID;
-    wechatTokenInput.value = wechatToken;
-    wechatTopicInput.value = wechatTopic;
     signOutBtn.classList.toggle('hidden', !auth.isSignedIn);
     graphBackfillStatus.textContent = graphBackfillDefaultStatus;
     modal.classList.remove('hidden');
@@ -1115,10 +1108,6 @@ document.addEventListener('DOMContentLoaded', () => {
   saveBtn.addEventListener('click', () => {
     docID = docIDInput.value.trim();
     localStorage.setItem('docID', docID);
-    wechatToken = wechatTokenInput.value.trim();
-    localStorage.setItem('wechatToken', wechatToken);
-    wechatTopic = wechatTopicInput.value.trim();
-    localStorage.setItem('wechatTopic', wechatTopic);
     modal.classList.add('hidden');
   });
 

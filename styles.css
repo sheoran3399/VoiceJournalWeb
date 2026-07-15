@@ -662,6 +662,57 @@ header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700;
   width: 100%;
 }
 
+/* Accordion sections (CBT + Manifestation, merged into the Voice tab) —
+   hairline divider instead of card-in-card nesting, per DESIGN.md layout. */
+.accordion-section {
+  width: 100%;
+  border-top: 1px solid var(--border);
+}
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  transition: color 0.15s;
+}
+
+.accordion-header:hover { color: var(--accent); }
+
+.accordion-icon { font-size: 18px; }
+
+.accordion-title {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.accordion-chevron {
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: transform 0.2s, color 0.15s;
+}
+
+.accordion-header[aria-expanded="true"] { color: var(--accent); }
+.accordion-header[aria-expanded="true"] .accordion-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.accordion-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
 /* CBT Form */
 .cbt-form,
 .manifestation-form {
