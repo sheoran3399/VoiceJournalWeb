@@ -1295,3 +1295,64 @@ header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700;
   background: none;
   padding: 0;
 }
+
+/* --- "Suggest from my journal": personalized CBT/Manifestation picks --- */
+.personalize-card {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+}
+.personalize-card.hidden { display: none; }
+.personalize-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.personalize-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.personalize-status {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.personalize-body { display: flex; flex-direction: column; gap: 14px; }
+.personalize-group { display: flex; flex-direction: column; gap: 7px; }
+.personalize-group-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.personalize-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.personalize-chip {
+  padding: 7px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.personalize-chip:hover { background: var(--border); }
+.personalize-chip.used {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: #fff;
+}
+.personalize-empty {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-muted);
+}
