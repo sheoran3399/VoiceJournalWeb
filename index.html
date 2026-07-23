@@ -145,8 +145,16 @@
         </div>
         <div class="cbt-actions">
           <button id="saveCBTBtn" class="add-entry-btn">Save entry</button>
+          <button id="suggestCBTBtn" class="add-entry-btn secondary">✨ Suggest from my journal</button>
           <button id="analyzeBtn" class="add-entry-btn secondary">Run pattern analysis</button>
           <button id="graphPatternsBtn" class="add-entry-btn secondary">🕸 Recurring patterns</button>
+        </div>
+        <div id="cbtSuggestCard" class="personalize-card hidden">
+          <div class="personalize-header">
+            <span class="personalize-title">✨ Tailored to your recent entries</span>
+            <span id="cbtSuggestStatus" class="personalize-status"></span>
+          </div>
+          <div id="cbtSuggestBody" class="personalize-body"></div>
         </div>
         <div id="cbtAnalysisCard" class="cbt-analysis-card hidden">
           <div class="cbt-analysis-header">
@@ -180,7 +188,15 @@
         </div>
         <div class="manifestation-actions">
           <button id="saveManifestationBtn" class="add-entry-btn">Save entry</button>
+          <button id="suggestManifestBtn" class="add-entry-btn secondary">✨ Suggest from my journal</button>
           <button id="editPicksBtn" class="add-entry-btn secondary">✏️ Edit quick picks</button>
+        </div>
+        <div id="manifestSuggestCard" class="personalize-card hidden">
+          <div class="personalize-header">
+            <span class="personalize-title">✨ Tailored to your recent entries</span>
+            <span id="manifestSuggestStatus" class="personalize-status"></span>
+          </div>
+          <div id="manifestSuggestBody" class="personalize-body"></div>
         </div>
       </div>
     </div>
@@ -310,11 +326,12 @@
   <script src="js/cbt.js?v=3"></script>
   <script src="js/drive-file.js?v=1"></script>
   <script src="js/manifestation.js?v=3"></script>
+  <script src="js/personalize.js?v=1"></script>
   <script src="js/insights.js?v=2"></script>
   <script src="js/insights-rewrite.js?v=1"></script>
   <script src="js/insights-export.js?v=1"></script>
   <script src="js/habit.js?v=2"></script>
   <script src="js/gmail-export.js?v=1"></script>
-  <script src="js/app.js?v=30"></script>
+  <script src="js/app.js?v=31"></script>
 </body>
 </html>

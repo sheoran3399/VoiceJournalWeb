@@ -68,6 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const graphPatternsBtn  = document.getElementById('graphPatternsBtn');
   const graphPatternsCard = document.getElementById('graphPatternsCard');
   const graphPatternsBody = document.getElementById('graphPatternsBody');
+  // "Suggest from my journal" — AI/heuristic personalization from recent entries
+  const suggestCBTBtn      = document.getElementById('suggestCBTBtn');
+  const cbtSuggestCard     = document.getElementById('cbtSuggestCard');
+  const cbtSuggestBody     = document.getElementById('cbtSuggestBody');
+  const cbtSuggestStatus   = document.getElementById('cbtSuggestStatus');
+  const suggestManifestBtn   = document.getElementById('suggestManifestBtn');
+  const manifestSuggestCard  = document.getElementById('manifestSuggestCard');
+  const manifestSuggestBody  = document.getElementById('manifestSuggestBody');
+  const manifestSuggestStatus = document.getElementById('manifestSuggestStatus');
   const tabButtons = document.querySelectorAll('.tab-btn');
 
   // Manifestation refs — merged into the Voice tab as a collapsible accordion section
@@ -954,6 +963,99 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('[Graph] patterns error:', err);
       setGraphCardState(graphPatternsCard, graphPatternsBody, 'error', err.message);
     }
+  });
+
+  // --- "Suggest from my journal": tailor CBT / Manifestation picks to the
+  // user's own recent entries. Reads recent journal text, derives suggestions
+  // client-side instantly (PersonalizeService), shows them as click-to-fill
+  // chips, then silently upgrades to an AI-generated set if the proxy has an
+  // /api/personalize route. Shared runner for both sections.
+  async function runPersonalize(opts) {
+    const { card, body, statusEl, kind, buildSuggestions, form, sectionLabels } = opts;
+    if (!auth.isSignedIn) {
+      card.classList.remove('hidden');
+      body.replaceChildren();
+      statusEl.textContent = '';
+      const msg = document.createElement('div');
+      msg.className = 'personalize-empty';
+      msg.textContent = '⚠ Sign in to Google first so I can read your recent entries.';
+      body.appendChild(msg);
+      return;
+    }
+    if (!docID) {
+      card.classList.remove('hidden');
+      body.replaceChildren();
+      statusEl.textContent = '';
+      const msg = document.createElement('div');
+      msg.className = 'personalize-empty';
+      msg.textContent = '⚠ No Google Doc ID set. Click ⚙ to add one.';
+      body.appendChild(msg);
+      return;
+    }
+    card.classList.remove('hidden');
+    body.replaceChildren();
+    statusEl.textContent = 'Reading your recent journal…';
+    try {
+      const token = await auth.freshAccessToken();
+      if (!token) throw new Error('Could not refresh Google token.');
+      const entries = await PersonalizeService.fetchRecentEntries(docID, token, 90);
+      if (!entries.length) {
+        statusEl.textContent = '';
+        PersonalizeService.render(body, {}, form, sectionLabels);
+        return;
+      }
+      const analysis = PersonalizeService.analyze(entries);
+      const suggestions = buildSuggestions(analysis);
+      statusEl.textContent = `from ${entries.length} recent ${entries.length === 1 ? 'entry' : 'entries'}`;
+      PersonalizeService.render(body, suggestions, form, sectionLabels);
+
+      // Silent AI upgrade (no-op if /api/personalize isn't deployed).
+      const upgraded = await PersonalizeService.aiUpgrade(kind, entries);
+      if (upgraded && Object.keys(upgraded).length) {
+        statusEl.textContent = `✨ AI-tailored from ${entries.length} recent ${entries.length === 1 ? 'entry' : 'entries'}`;
+        PersonalizeService.render(body, upgraded, form, sectionLabels);
+      }
+    } catch (err) {
+      console.error(`[Personalize:${kind}] error:`, err);
+      statusEl.textContent = '';
+      body.replaceChildren();
+      const msg = document.createElement('div');
+      msg.className = 'personalize-empty';
+      msg.textContent = '⚠ ' + err.message;
+      body.appendChild(msg);
+    }
+  }
+
+  const CBT_SECTION_LABELS = {
+    scenario: 'Scenario — situations that recur for you',
+    emotion: 'Emotions you name most',
+    thought: 'Automatic thoughts pulled from your entries',
+    reframe: 'Balanced reframes to try',
+  };
+  const MANIFEST_SECTION_LABELS = {
+    desired_outcome: 'Desired outcomes drawn from your themes',
+    gratitude: 'Gratitude rooted in your life',
+    limiting_belief: 'Limiting beliefs surfaced from your words',
+    aligned_action: 'Aligned actions for your themes',
+  };
+
+  suggestCBTBtn.addEventListener('click', () => {
+    // Make sure the CBT form exists (accordion may not have rendered it yet).
+    if (!cbtForm.querySelector('.cbt-section')) CBTService.renderForm(cbtForm);
+    runPersonalize({
+      card: cbtSuggestCard, body: cbtSuggestBody, statusEl: cbtSuggestStatus,
+      kind: 'cbt', buildSuggestions: (a) => PersonalizeService.cbtSuggestions(a),
+      form: cbtForm, sectionLabels: CBT_SECTION_LABELS,
+    });
+  });
+
+  suggestManifestBtn.addEventListener('click', () => {
+    if (!manifestationForm.querySelector('.cbt-section')) ManifestationService.renderForm(manifestationForm);
+    runPersonalize({
+      card: manifestSuggestCard, body: manifestSuggestBody, statusEl: manifestSuggestStatus,
+      kind: 'manifestation', buildSuggestions: (a) => PersonalizeService.manifestSuggestions(a),
+      form: manifestationForm, sectionLabels: MANIFEST_SECTION_LABELS,
+    });
   });
 
   // --- Decade patterns: ingest book v0/v1, then compare the current
